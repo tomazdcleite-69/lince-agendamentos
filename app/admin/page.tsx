@@ -1,4 +1,6 @@
 import Link from "next/link";
+import LogoutButton from "@/components/LogoutButton";
+import { requireAdminUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
   BOOKING_STATUS_LABELS,
@@ -26,6 +28,8 @@ function getStatusLabel(status: BookingStatus) {
 }
 
 export default async function AdminPage() {
+  await requireAdminUser("/admin");
+
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select(
@@ -47,12 +51,15 @@ export default async function AdminPage() {
               Agendamentos da Sala de Testes
             </h1>
           </div>
-          <Link
-            href="/"
-            className="inline-flex w-fit items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300"
-          >
-            Página pública
-          </Link>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/"
+              className="inline-flex w-fit items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300"
+            >
+              Página pública
+            </Link>
+            <LogoutButton />
+          </div>
         </header>
 
         {error ? (

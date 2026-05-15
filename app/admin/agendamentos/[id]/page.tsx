@@ -1,5 +1,7 @@
 import Link from "next/link";
 import StatusUpdateForm from "@/components/StatusUpdateForm";
+import LogoutButton from "@/components/LogoutButton";
+import { requireAdminUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
   BOOKING_STATUS_LABELS,
@@ -52,6 +54,8 @@ export default async function AdminBookingPage({
   params,
 }: AdminBookingPageProps) {
   const { id } = await params;
+  await requireAdminUser(`/admin/agendamentos/${id}`);
+
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select(
@@ -86,22 +90,25 @@ export default async function AdminBookingPage({
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto grid max-w-5xl gap-6">
-        <header>
-          <Link
-            href="/admin"
-            className="text-sm font-semibold text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline"
-          >
-            Voltar ao painel
-          </Link>
-          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
-            {booking.company_name}
-          </h1>
-          <p className="mt-2 text-slate-600">
-            Status atual:{" "}
-            <span className="font-semibold text-slate-900">
-              {getStatusLabel(booking.status)}
-            </span>
-          </p>
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <Link
+              href="/admin"
+              className="text-sm font-semibold text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline"
+            >
+              Voltar ao painel
+            </Link>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
+              {booking.company_name}
+            </h1>
+            <p className="mt-2 text-slate-600">
+              Status atual:{" "}
+              <span className="font-semibold text-slate-900">
+                {getStatusLabel(booking.status)}
+              </span>
+            </p>
+          </div>
+          <LogoutButton />
         </header>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
