@@ -32,17 +32,6 @@ function normalizeSession(
 
 export default async function Home() {
   const queriedView = "test_room_sessions_with_availability";
-  const debugContext = {
-    env: {
-      NEXT_PUBLIC_SUPABASE_URL: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
-      SUPABASE_SERVICE_ROLE_KEY: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
-    },
-    tableOrView: queriedView,
-  };
-
-  console.log(
-    "[debug:sessions] Consulta Supabase " + JSON.stringify(debugContext),
-  );
 
   const today = getTodayInSaoPaulo();
   const { data, error } = await supabaseAdmin
@@ -53,16 +42,6 @@ export default async function Home() {
     .gte("session_date", today)
     .order("session_date", { ascending: true })
     .order("start_time", { ascending: true });
-
-  if (error) {
-    console.error(
-      "[debug:sessions] Erro completo do Supabase " +
-        JSON.stringify({
-          ...debugContext,
-          error,
-        }),
-    );
-  }
 
   const sessions = (data ?? []).map(normalizeSession);
 
