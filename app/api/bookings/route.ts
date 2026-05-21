@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import {
+  buildCustomerBookingEmail,
+  buildLinceNotificationEmail,
+} from "@/lib/emailTemplates";
+import { getEmailConfig, getResendClient } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase";
 import { generatePublicToken } from "@/lib/tokens";
 
@@ -14,6 +19,70 @@ function getString(payload: Record<string, unknown>, key: string) {
 
 function errorResponse(message: string, status = 400) {
   return NextResponse.json({ error: message, success: false }, { status });
+}
+
+function getBaseUrl(request: Request) {
+  return request.headers.get("origin") ?? new URL(request.url).origin;
+}
+
+function normalizeEmailError(error: unknown) {
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      name: error.name,
+    };
+  }
+
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+
+    return {
+      message: typeof value.message === "string" ? value.message : undefined,
+      name: typeof value.name === "string" ? value.name : undefined,
+      statusCode:
+        typeof value.statusCode === "number" ? value.statusCode : undefined,
+    };
+  }
+
+  return {
+    message: "Erro desconhecido ao enviar e-mail.",
+  };
+}
+
+async function sendBookingEmail(
+  label: string,
+  payload: {
+    from: string;
+    html: string;
+    subject: string;
+    to: string | string[];
+  },
+) {
+  const resend = getResendClient();
+
+  if (!resend) {
+    console.error("[email] Resend não configurado para envio.", {
+      hasResendApiKey: Boolean(process.env.RESEND_API_KEY),
+      messageType: label,
+    });
+    return;
+  }
+
+  try {
+    const result = await resend.emails.send(payload);
+
+    if (result.error) {
+      console.error("[email] Falha retornada pelo Resend.", {
+        error: normalizeEmailError(result.error),
+        messageType: label,
+      });
+    }
+  } catch (emailError) {
+    console.error("[email] Erro ao enviar e-mail.", {
+      error: normalizeEmailError(emailError),
+      messageType: label,
+    });
+  }
 }
 
 export async function POST(request: Request) {
@@ -115,6 +184,47 @@ export async function POST(request: Request) {
       "O agendamento foi criado, mas não foi possível registrar o histórico.",
       500,
     );
+  }
+
+  const { from, linceNotificationEmails } = getEmailConfig();
+
+  if (!from || linceNotificationEmails.length === 0) {
+    console.error("[email] Configuração de e-mail incompleta.", {
+      hasEmailFrom: Boolean(from),
+      hasLinceNotificationEmail: linceNotificationEmails.length > 0,
+      hasResendApiKey: Boolean(process.env.RESEND_API_KEY),
+    });
+  } else {
+    const baseUrl = getBaseUrl(request);
+    const emailDetails = {
+      adminUrl: `${baseUrl}/admin`,
+      candidatesCount,
+      companyName,
+      contactEmail,
+      contactName,
+      contactPhone: contactPhone || null,
+      notes: notes || null,
+      sessionDate: session.session_date,
+      startTime: session.start_time,
+      statusUrl: `${baseUrl}/status/${booking.public_token}`,
+    };
+    const customerEmail = buildCustomerBookingEmail(emailDetails);
+    const linceEmail = buildLinceNotificationEmail(emailDetails);
+
+    await Promise.all([
+      sendBookingEmail("cliente", {
+        from,
+        html: customerEmail.html,
+        subject: customerEmail.subject,
+        to: contactEmail,
+      }),
+      sendBookingEmail("equipe_lince", {
+        from,
+        html: linceEmail.html,
+        subject: linceEmail.subject,
+        to: linceNotificationEmails,
+      }),
+    ]);
   }
 
   return NextResponse.json({
