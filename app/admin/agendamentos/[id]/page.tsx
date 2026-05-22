@@ -59,7 +59,7 @@ export default async function AdminBookingPage({
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select(
-      "id, session_id, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, status, public_token, created_at, test_room_sessions(session_date, start_time)",
+      "id, session_id, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, status, public_token, created_at, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_name, desired_role, resume_url, created_at)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -86,6 +86,10 @@ export default async function AdminBookingPage({
       </main>
     );
   }
+
+  const candidates = [...(booking.booking_candidates ?? [])].sort((a, b) =>
+    a.created_at.localeCompare(b.created_at),
+  );
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
@@ -158,6 +162,55 @@ export default async function AdminBookingPage({
               </dd>
             </div>
           </dl>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">
+                Candidatos
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                {candidates.length} candidato(s) vinculado(s) a este
+                agendamento.
+              </p>
+            </div>
+          </div>
+
+          {candidates.length > 0 ? (
+            <ul className="mt-5 divide-y divide-slate-200 rounded-2xl border border-slate-200">
+              {candidates.map((candidate, index) => (
+                <li
+                  key={candidate.id}
+                  className="grid gap-3 px-4 py-4 sm:grid-cols-[48px_1fr_1fr] sm:items-center"
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+                    {index + 1}
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Nome do candidato
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      {candidate.candidate_name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Cargo pretendido
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      {candidate.desired_role}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-5 rounded-2xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-600">
+              Nenhum candidato vinculado a este agendamento.
+            </p>
+          )}
         </section>
 
         <StatusUpdateForm

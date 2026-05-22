@@ -11,10 +11,63 @@ export const runtime = "nodejs";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+type CandidateInput = {
+  candidate_name: string;
+  desired_role: string;
+};
+
+type CandidateParseResult =
+  | {
+      candidates: CandidateInput[];
+      error?: never;
+    }
+  | {
+      candidates?: never;
+      error: string;
+    };
+
 function getString(payload: Record<string, unknown>, key: string) {
   const value = payload[key];
 
   return typeof value === "string" ? value.trim() : "";
+}
+
+function getCandidates(value: unknown): CandidateParseResult {
+  if (!Array.isArray(value)) {
+    return {
+      error: "Informe a lista de candidatos.",
+    };
+  }
+
+  if (value.length === 0) {
+    return {
+      error: "Adicione pelo menos um candidato para continuar.",
+    };
+  }
+
+  const candidates = value.map((item) => {
+    const candidate =
+      item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+
+    return {
+      candidate_name: getString(candidate, "candidate_name"),
+      desired_role: getString(candidate, "desired_role"),
+    };
+  });
+
+  if (
+    candidates.some(
+      (candidate) => !candidate.candidate_name || !candidate.desired_role,
+    )
+  ) {
+    return {
+      error: "Informe nome e cargo pretendido para todos os candidatos.",
+    };
+  }
+
+  return {
+    candidates,
+  };
 }
 
 function errorResponse(message: string, status = 400) {
@@ -100,7 +153,7 @@ export async function POST(request: Request) {
   const contactEmail = getString(payload, "contact_email").toLowerCase();
   const contactPhone = getString(payload, "contact_phone");
   const notes = getString(payload, "notes");
-  const candidatesCount = Number(payload.candidates_count);
+  const parsedCandidates = getCandidates(payload.candidates);
 
   if (!sessionId) {
     return errorResponse("Escolha uma data para agendar.");
@@ -118,9 +171,12 @@ export async function POST(request: Request) {
     return errorResponse("Informe um e-mail válido.");
   }
 
-  if (!Number.isInteger(candidatesCount) || candidatesCount <= 0) {
-    return errorResponse("Informe uma quantidade válida de candidatos.");
+  if (parsedCandidates.error || !parsedCandidates.candidates) {
+    return errorResponse(parsedCandidates.error ?? "Informe os candidatos.");
   }
+
+  const candidates: CandidateInput[] = parsedCandidates.candidates;
+  const candidatesCount = candidates.length;
 
   const { data: session, error: sessionError } = await supabaseAdmin
     .from("test_room_sessions_with_availability")
@@ -169,6 +225,25 @@ export async function POST(request: Request) {
     return errorResponse("Não foi possível criar o agendamento.", 500);
   }
 
+  const { error: candidatesError } = await supabaseAdmin
+    .from("booking_candidates")
+    .insert(
+      candidates.map((candidate) => ({
+        booking_id: booking.id,
+        candidate_name: candidate.candidate_name,
+        desired_role: candidate.desired_role,
+      })),
+    );
+
+  if (candidatesError) {
+    await supabaseAdmin.from("bookings").delete().eq("id", booking.id);
+
+    return errorResponse(
+      "Não foi possível registrar os candidatos do agendamento.",
+      500,
+    );
+  }
+
   const { error: historyError } = await supabaseAdmin
     .from("status_history")
     .insert({
@@ -199,6 +274,10 @@ export async function POST(request: Request) {
     const emailDetails = {
       adminUrl: `${baseUrl}/admin`,
       candidatesCount,
+      candidates: candidates.map((candidate) => ({
+        candidateName: candidate.candidate_name,
+        desiredRole: candidate.desired_role,
+      })),
       companyName,
       contactEmail,
       contactName,

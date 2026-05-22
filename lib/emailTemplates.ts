@@ -2,6 +2,10 @@ import "server-only";
 
 type BookingEmailDetails = {
   adminUrl: string;
+  candidates: Array<{
+    candidateName: string;
+    desiredRole: string;
+  }>;
   candidatesCount: number;
   companyName: string;
   contactEmail: string;
@@ -36,6 +40,15 @@ function formatTime(time: string) {
   return time.slice(0, 5);
 }
 
+function formatCandidates(candidates: BookingEmailDetails["candidates"]) {
+  return candidates
+    .map(
+      (candidate, index) =>
+        `${index + 1}. ${candidate.candidateName} - ${candidate.desiredRole}`,
+    )
+    .join("\n");
+}
+
 function renderLayout(title: string, rows: Array<[string, string | number]>) {
   const renderedRows = rows
     .map(
@@ -44,7 +57,7 @@ function renderLayout(title: string, rows: Array<[string, string | number]>) {
           <td style="padding: 10px 0; color: #475569; font-size: 14px; width: 180px;">${escapeHtml(
             label,
           )}</td>
-          <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${escapeHtml(
+          <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: 600; white-space: pre-line;">${escapeHtml(
             value,
           )}</td>
         </tr>
@@ -80,6 +93,7 @@ export function buildCustomerBookingEmail(details: BookingEmailDetails) {
       ["Data", formatDate(details.sessionDate)],
       ["Horário", formatTime(details.startTime)],
       ["Quantidade de candidatos", details.candidatesCount],
+      ["Candidatos", formatCandidates(details.candidates)],
       ["Status", "Solicitado"],
       ["Link público de status", details.statusUrl],
     ]),
@@ -97,6 +111,7 @@ export function buildLinceNotificationEmail(details: BookingEmailDetails) {
       ["Data", formatDate(details.sessionDate)],
       ["Horário", formatTime(details.startTime)],
       ["Quantidade de candidatos", details.candidatesCount],
+      ["Candidatos", formatCandidates(details.candidates)],
       ["Observações", details.notes || "Sem observações."],
       ["Link para o painel", details.adminUrl],
     ]),

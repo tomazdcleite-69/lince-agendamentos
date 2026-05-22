@@ -12,8 +12,13 @@ type FormState = {
   contact_name: string;
   contact_email: string;
   contact_phone: string;
-  candidates_count: string;
   notes: string;
+};
+
+type CandidateForm = {
+  candidate_name: string;
+  desired_role: string;
+  id: string;
 };
 
 const initialFormState: FormState = {
@@ -21,9 +26,16 @@ const initialFormState: FormState = {
   contact_name: "",
   contact_email: "",
   contact_phone: "",
-  candidates_count: "1",
   notes: "",
 };
+
+function createEmptyCandidate(): CandidateForm {
+  return {
+    candidate_name: "",
+    desired_role: "",
+    id: crypto.randomUUID(),
+  };
+}
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -42,6 +54,9 @@ function formatTime(time: string) {
 export default function BookingForm({ sessions }: BookingFormProps) {
   const [sessionId, setSessionId] = useState(sessions[0]?.id ?? "");
   const [form, setForm] = useState<FormState>(initialFormState);
+  const [candidates, setCandidates] = useState<CandidateForm[]>([
+    createEmptyCandidate(),
+  ]);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -55,23 +70,43 @@ export default function BookingForm({ sessions }: BookingFormProps) {
   }
 
   function handleSessionChange(nextSessionId: string) {
-    const nextSession = sessions.find((session) => session.id === nextSessionId);
-
     setSessionId(nextSessionId);
+  }
 
-    if (!nextSession) {
+  function addCandidate() {
+    if (
+      selectedSession &&
+      candidates.length >= Number(selectedSession.available_spots)
+    ) {
+      setError("A quantidade de candidatos já atingiu as vagas disponíveis.");
       return;
     }
 
-    setForm((current) => {
-      const currentCount = Number(current.candidates_count) || 1;
-      const nextCount = Math.min(currentCount, nextSession.available_spots);
+    setError("");
+    setCandidates((current) => [...current, createEmptyCandidate()]);
+  }
 
-      return {
-        ...current,
-        candidates_count: String(Math.max(1, nextCount)),
-      };
-    });
+  function removeCandidate(candidateId: string) {
+    setCandidates((current) =>
+      current.filter((candidate) => candidate.id !== candidateId),
+    );
+  }
+
+  function updateCandidate(
+    candidateId: string,
+    field: "candidate_name" | "desired_role",
+    value: string,
+  ) {
+    setCandidates((current) =>
+      current.map((candidate) =>
+        candidate.id === candidateId
+          ? {
+              ...candidate,
+              [field]: value,
+            }
+          : candidate,
+      ),
+    );
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -82,6 +117,32 @@ export default function BookingForm({ sessions }: BookingFormProps) {
       return;
     }
 
+    const normalizedCandidates = candidates.map((candidate) => ({
+      candidate_name: candidate.candidate_name.trim(),
+      desired_role: candidate.desired_role.trim(),
+    }));
+
+    if (normalizedCandidates.length === 0) {
+      setError("Adicione pelo menos um candidato para continuar.");
+      return;
+    }
+
+    if (
+      normalizedCandidates.some(
+        (candidate) => !candidate.candidate_name || !candidate.desired_role,
+      )
+    ) {
+      setError("Informe nome e cargo pretendido para todos os candidatos.");
+      return;
+    }
+
+    if (normalizedCandidates.length > selectedSession.available_spots) {
+      setError(
+        `A data escolhida possui apenas ${selectedSession.available_spots} vagas disponíveis.`,
+      );
+      return;
+    }
+
     setError("");
     setIsSubmitting(true);
 
@@ -89,7 +150,7 @@ export default function BookingForm({ sessions }: BookingFormProps) {
       const response = await fetch("/api/bookings", {
         body: JSON.stringify({
           ...form,
-          candidates_count: Number(form.candidates_count),
+          candidates: normalizedCandidates,
           session_id: selectedSession.id,
         }),
         headers: {
@@ -221,22 +282,6 @@ export default function BookingForm({ sessions }: BookingFormProps) {
           />
         </label>
 
-        <label className="grid gap-2 text-sm font-medium text-slate-700">
-          Quantidade de candidatos
-          <input
-            required
-            type="number"
-            min={1}
-            max={selectedSession?.available_spots ?? 1}
-            name="candidates_count"
-            value={form.candidates_count}
-            onChange={(event) =>
-              updateField("candidates_count", event.target.value)
-            }
-            className="rounded-xl border border-slate-200 px-3 py-2 text-slate-900 outline-none transition focus:border-slate-900"
-          />
-        </label>
-
         <label className="grid gap-2 text-sm font-medium text-slate-700 md:col-span-2">
           Observações
           <textarea
@@ -248,6 +293,95 @@ export default function BookingForm({ sessions }: BookingFormProps) {
           />
         </label>
       </div>
+
+      <section className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Candidatos
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Candidatos adicionados: {candidates.length}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={addCandidate}
+            disabled={
+              Boolean(selectedSession) &&
+              candidates.length >= (selectedSession?.available_spots ?? 0)
+            }
+            className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          >
+            + Adicionar candidato
+          </button>
+        </div>
+
+        <div className="mt-4 grid gap-3">
+          {candidates.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-5 text-sm text-slate-600">
+              Nenhum candidato adicionado ainda.
+            </p>
+          ) : null}
+
+          {candidates.map((candidate, index) => (
+            <div
+              key={candidate.id}
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+            >
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Candidato {index + 1}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => removeCandidate(candidate.id)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  aria-label={`Remover candidato ${index + 1}`}
+                >
+                  X
+                </button>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="grid gap-2 text-sm font-medium text-slate-700">
+                  Nome do candidato
+                  <input
+                    required
+                    value={candidate.candidate_name}
+                    onChange={(event) =>
+                      updateCandidate(
+                        candidate.id,
+                        "candidate_name",
+                        event.target.value,
+                      )
+                    }
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-slate-900 outline-none transition focus:border-slate-900"
+                    placeholder="Nome completo"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm font-medium text-slate-700">
+                  Cargo pretendido
+                  <input
+                    required
+                    value={candidate.desired_role}
+                    onChange={(event) =>
+                      updateCandidate(
+                        candidate.id,
+                        "desired_role",
+                        event.target.value,
+                      )
+                    }
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-slate-900 outline-none transition focus:border-slate-900"
+                    placeholder="Ex.: Analista Comercial"
+                  />
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {error ? (
         <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

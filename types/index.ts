@@ -59,6 +59,15 @@ export type Booking = {
   created_at: string;
 };
 
+export type BookingCandidate = {
+  id: string;
+  booking_id: string;
+  candidate_name: string;
+  desired_role: string;
+  resume_url: string | null;
+  created_at: string;
+};
+
 export type StatusHistory = {
   id: string;
   booking_id: string;
@@ -70,6 +79,7 @@ export type StatusHistory = {
 };
 
 export type BookingWithSession = Booking & {
+  booking_candidates?: BookingCandidate[];
   test_room_sessions: Pick<TestRoomSession, "session_date" | "start_time"> | null;
 };
 
@@ -111,6 +121,18 @@ export type Database = {
           created_at?: string;
         },
         Partial<Booking>
+      >;
+      booking_candidates: TableDefinition<
+        BookingCandidate,
+        {
+          id?: string;
+          booking_id: string;
+          candidate_name: string;
+          desired_role: string;
+          resume_url?: string | null;
+          created_at?: string;
+        },
+        Partial<BookingCandidate>
       >;
       status_history: TableDefinition<
         StatusHistory,
