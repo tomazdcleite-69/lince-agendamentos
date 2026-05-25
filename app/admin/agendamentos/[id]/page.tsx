@@ -1,7 +1,9 @@
+import Image from "next/image";
 import Link from "next/link";
-import StatusUpdateForm from "@/components/StatusUpdateForm";
 import LogoutButton from "@/components/LogoutButton";
+import StatusUpdateForm from "@/components/StatusUpdateForm";
 import { requireAdminUser } from "@/lib/auth";
+import { getServiceCompanyLabel } from "@/lib/serviceCompany";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
   BOOKING_STATUS_LABELS,
@@ -43,7 +45,7 @@ function DetailItem({
   value: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 p-4">
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
       <dt className="text-sm font-medium text-slate-500">{label}</dt>
       <dd className="mt-1 font-semibold text-slate-900">{value}</dd>
     </div>
@@ -59,7 +61,7 @@ export default async function AdminBookingPage({
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select(
-      "id, session_id, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, status, public_token, created_at, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_name, desired_role, resume_url, created_at)",
+      "id, session_id, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, service_company, status, public_token, created_at, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_name, desired_role, resume_url, created_at)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -68,9 +70,9 @@ export default async function AdminBookingPage({
 
   if (error || !booking) {
     return (
-      <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
-        <section className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold text-slate-900">
+      <main className="min-h-screen bg-[#5b2396] px-4 py-10 text-white sm:px-6 lg:px-8">
+        <section className="mx-auto max-w-2xl rounded-[22px] border-[3px] border-black bg-white p-8 text-slate-900 shadow-[0_10px_0_rgba(0,0,0,0.22)]">
+          <h1 className="text-2xl font-semibold">
             Agendamento não encontrado
           </h1>
           <p className="mt-3 text-slate-600">
@@ -78,7 +80,7 @@ export default async function AdminBookingPage({
           </p>
           <Link
             href="/admin"
-            className="mt-6 inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+            className="mt-6 inline-flex items-center justify-center rounded-2xl bg-[#5b2396] px-5 py-3 text-sm font-black uppercase tracking-wide text-white shadow-[6px_6px_0_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5"
           >
             Voltar ao painel
           </Link>
@@ -92,35 +94,52 @@ export default async function AdminBookingPage({
   );
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#5b2396] px-4 py-6 text-white sm:px-8 lg:px-10">
       <div className="mx-auto grid max-w-5xl gap-6">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Link
-              href="/admin"
-              className="text-sm font-semibold text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline"
-            >
-              Voltar ao painel
-            </Link>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
-              {booking.company_name}
+        <header className="grid gap-5 lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)_auto] lg:items-center">
+          <div className="flex h-[84px] w-[240px] items-center justify-center overflow-hidden rounded-full bg-[#8b2be8] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.08)] sm:h-[104px] sm:w-[300px]">
+            <Image
+              src="/lince-logo.png"
+              alt="Lince"
+              width={313}
+              height={109}
+              priority
+              unoptimized
+              className="h-full w-full object-contain"
+            />
+          </div>
+
+          <div className="text-center lg:text-left">
+            <p className="text-3xl font-black uppercase leading-none tracking-[0.08em] text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.25)]">
+              PAINEL INTERNO
+            </p>
+            <h1 className="mt-2 text-lg font-semibold text-white/90 sm:text-2xl">
+              Agendamento de {booking.company_name}
             </h1>
-            <p className="mt-2 text-slate-600">
-              Status atual:{" "}
-              <span className="font-semibold text-slate-900">
-                {getStatusLabel(booking.status)}
-              </span>
+            <p className="mt-1 text-sm font-medium text-white/80">
+              Status atual: {getStatusLabel(booking.status)}
             </p>
           </div>
-          <LogoutButton />
+
+          <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
+            <Link
+              href="/admin"
+              className="inline-flex w-fit items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black uppercase tracking-wide !text-black shadow-[6px_6px_0_rgba(0,0,0,0.32)] transition hover:-translate-y-0.5 hover:bg-[#efe4ff]"
+            >
+              Voltar
+            </Link>
+            <LogoutButton />
+          </div>
         </header>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-slate-900">
-            Detalhes do agendamento
-          </h2>
+        <section className="rounded-[22px] border-[3px] border-black bg-white p-6 text-slate-900 shadow-[0_10px_0_rgba(0,0,0,0.22)]">
+          <h2 className="text-xl font-semibold">Detalhes do agendamento</h2>
           <dl className="mt-5 grid gap-4 sm:grid-cols-2">
             <DetailItem label="Empresa" value={booking.company_name} />
+            <DetailItem
+              label="Empresa do serviço"
+              value={getServiceCompanyLabel(booking.service_company)}
+            />
             <DetailItem label="Responsável" value={booking.contact_name} />
             <DetailItem label="E-mail" value={booking.contact_email} />
             <DetailItem
@@ -149,11 +168,8 @@ export default async function AdminBookingPage({
               label="Quantidade de candidatos"
               value={booking.candidates_count}
             />
-            <DetailItem
-              label="Status"
-              value={getStatusLabel(booking.status)}
-            />
-            <div className="rounded-2xl border border-slate-200 p-4 sm:col-span-2">
+            <DetailItem label="Status" value={getStatusLabel(booking.status)} />
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:col-span-2">
               <dt className="text-sm font-medium text-slate-500">
                 Observações
               </dt>
@@ -164,12 +180,10 @@ export default async function AdminBookingPage({
           </dl>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-[22px] border-[3px] border-black bg-white p-6 text-slate-900 shadow-[0_10px_0_rgba(0,0,0,0.22)]">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">
-                Candidatos
-              </h2>
+              <h2 className="text-xl font-semibold">Candidatos</h2>
               <p className="mt-1 text-sm text-slate-600">
                 {candidates.length} candidato(s) vinculado(s) a este
                 agendamento.
@@ -184,7 +198,7 @@ export default async function AdminBookingPage({
                   key={candidate.id}
                   className="grid gap-3 px-4 py-4 sm:grid-cols-[48px_1fr_1fr] sm:items-center"
                 >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#efe4ff] text-sm font-black text-[#5b2396]">
                     {index + 1}
                   </span>
                   <div>

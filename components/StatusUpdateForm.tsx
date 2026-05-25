@@ -66,7 +66,7 @@ export default function StatusUpdateForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+      className="rounded-[22px] border-[3px] border-black bg-white p-6 text-slate-900 shadow-[0_10px_0_rgba(0,0,0,0.22)]"
     >
       <div>
         <h2 className="text-xl font-semibold text-slate-900">
@@ -121,7 +121,7 @@ export default function StatusUpdateForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
+        className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-[#5b2396] px-5 py-3 text-sm font-black uppercase tracking-wide text-white shadow-[6px_6px_0_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:bg-[#6d2ab4] disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
       >
         {isSubmitting ? "Salvando..." : "Salvar status"}
       </button>

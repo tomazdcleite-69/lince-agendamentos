@@ -25,7 +25,7 @@ export default function LogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={isSubmitting}
-      className="inline-flex w-fit items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex w-fit items-center justify-center rounded-2xl bg-[#8b2be8] px-5 py-3 text-sm font-black uppercase tracking-wide text-white shadow-[6px_6px_0_rgba(0,0,0,0.32)] transition hover:-translate-y-0.5 hover:bg-[#9d3cff] disabled:cursor-not-allowed disabled:opacity-60"
     >
       {isSubmitting ? "Saindo..." : "Sair"}
     </button>

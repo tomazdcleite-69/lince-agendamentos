@@ -17,6 +17,10 @@ export const BOOKING_STATUSES = [
 
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
+export const SERVICE_COMPANIES = ["lince", "psicoespaco"] as const;
+
+export type ServiceCompany = (typeof SERVICE_COMPANIES)[number];
+
 export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
   solicitado: "Solicitado",
   confirmado: "Confirmado",
@@ -54,6 +58,7 @@ export type Booking = {
   contact_phone: string | null;
   candidates_count: number;
   notes: string | null;
+  service_company: string;
   status: BookingStatus;
   public_token: string;
   created_at: string;
@@ -118,6 +123,7 @@ export type Database = {
           notes?: string | null;
           status?: BookingStatus;
           public_token: string;
+          service_company?: string;
           created_at?: string;
         },
         Partial<Booking>

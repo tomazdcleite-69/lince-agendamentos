@@ -12,6 +12,7 @@ type BookingEmailDetails = {
   contactName: string;
   contactPhone: string | null;
   notes: string | null;
+  serviceCompanyLabel: string;
   sessionDate: string;
   startTime: string;
   statusUrl: string;
@@ -88,6 +89,7 @@ function renderLayout(title: string, rows: Array<[string, string | number]>) {
 export function buildCustomerBookingEmail(details: BookingEmailDetails) {
   return {
     html: renderLayout("Agendamento recebido - Sala de Testes Lince", [
+      ["Empresa do serviço", details.serviceCompanyLabel],
       ["Empresa", details.companyName],
       ["Responsável", details.contactName],
       ["Data", formatDate(details.sessionDate)],
@@ -104,6 +106,7 @@ export function buildCustomerBookingEmail(details: BookingEmailDetails) {
 export function buildLinceNotificationEmail(details: BookingEmailDetails) {
   return {
     html: renderLayout("Novo agendamento de Sala de Testes", [
+      ["Empresa do serviço", details.serviceCompanyLabel],
       ["Empresa", details.companyName],
       ["Responsável", details.contactName],
       ["E-mail", details.contactEmail],

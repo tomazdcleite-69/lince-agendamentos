@@ -4,6 +4,11 @@ import {
   buildLinceNotificationEmail,
 } from "@/lib/emailTemplates";
 import { getEmailConfig, getResendClient } from "@/lib/resend";
+import { getTodayInSaoPauloDateKey } from "@/lib/scheduleGrid";
+import {
+  getServiceCompanyLabel,
+  normalizeServiceCompany,
+} from "@/lib/serviceCompany";
 import { supabaseAdmin } from "@/lib/supabase";
 import { generatePublicToken } from "@/lib/tokens";
 
@@ -154,6 +159,10 @@ export async function POST(request: Request) {
   const contactPhone = getString(payload, "contact_phone");
   const notes = getString(payload, "notes");
   const parsedCandidates = getCandidates(payload.candidates);
+  const serviceCompany = normalizeServiceCompany(
+    getString(payload, "service_company"),
+  );
+  const serviceCompanyLabel = getServiceCompanyLabel(serviceCompany);
 
   if (!sessionId) {
     return errorResponse("Escolha uma data para agendar.");
@@ -193,6 +202,13 @@ export async function POST(request: Request) {
   }
 
   const availableSpots = Number(session.available_spots);
+  const today = getTodayInSaoPauloDateKey();
+
+  if (session.session_date <= today) {
+    return errorResponse(
+      "Agendamentos devem ser feitos com pelo menos um dia de antecedência.",
+    );
+  }
 
   if (session.status !== "aberta") {
     return errorResponse("A data escolhida não está aberta para agendamento.");
@@ -215,6 +231,7 @@ export async function POST(request: Request) {
       contact_phone: contactPhone || null,
       notes: notes || null,
       public_token: publicToken,
+      service_company: serviceCompany,
       session_id: sessionId,
       status: "solicitado",
     })
@@ -283,6 +300,7 @@ export async function POST(request: Request) {
       contactName,
       contactPhone: contactPhone || null,
       notes: notes || null,
+      serviceCompanyLabel,
       sessionDate: session.session_date,
       startTime: session.start_time,
       statusUrl: `${baseUrl}/status/${booking.public_token}`,
