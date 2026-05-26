@@ -84,7 +84,7 @@ export default function Home() {
             <Link
               key={card.name}
               href={card.href}
-              className="group flex min-h-[150px] items-center justify-center rounded-[38px] bg-white p-5 shadow-[0_10px_0_rgba(0,0,0,0.22)] transition hover:-translate-y-1 hover:shadow-[0_14px_0_rgba(0,0,0,0.22)] focus:outline-none focus:ring-4 focus:ring-white/40 sm:min-h-[176px] sm:rounded-[46px]"
+              className="group flex min-h-[150px] flex-col items-center justify-center gap-3 rounded-[38px] bg-white p-5 shadow-[0_10px_0_rgba(0,0,0,0.22)] transition hover:-translate-y-1 hover:shadow-[0_14px_0_rgba(0,0,0,0.22)] focus:outline-none focus:ring-4 focus:ring-white/40 sm:min-h-[176px] sm:rounded-[46px]"
               aria-label={`Solicitar serviço para ${card.name}`}
             >
               <Image
@@ -93,8 +93,11 @@ export default function Home() {
                 width={card.image.width}
                 height={card.image.height}
                 unoptimized
-                className="max-h-[118px] w-full object-contain transition group-hover:scale-[1.03] sm:max-h-[142px]"
+                className="max-h-[86px] w-full object-contain transition group-hover:scale-[1.03] sm:max-h-[104px]"
               />
+              <span className="text-center text-xl font-black text-[#5b2396] sm:text-2xl">
+                {card.name}
+              </span>
             </Link>
           ))}
         </section>

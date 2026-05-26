@@ -250,7 +250,7 @@ export default function BookingForm({
             </label>
 
             <label className="grid gap-1 text-center text-sm font-medium text-white">
-              E-mail
+              E-mail p/ envio do laudo
               <input
                 required
                 type="email"
