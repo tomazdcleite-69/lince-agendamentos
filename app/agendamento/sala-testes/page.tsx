@@ -73,7 +73,7 @@ export default async function SalaTestesPage({
           </div>
 
           <div className="min-w-0 text-center">
-            <h1 className="whitespace-nowrap text-[clamp(1.45rem,3.35vw,3.75rem)] font-black uppercase leading-none tracking-[0.055em] text-white drop-shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
+            <h1 className="whitespace-nowrap text-[clamp(1.3rem,2.55vw,3rem)] font-black uppercase leading-none tracking-[0.045em] text-white drop-shadow-[3px_3px_0_rgba(0,0,0,0.25)]">
               AGENDA AVALIAÇÕES PSICOLÓGICAS
             </h1>
             <p className="mt-2 text-base font-semibold text-white/90 sm:text-lg">
