@@ -222,7 +222,7 @@ export default function BookingForm({
 
           <div className="mt-5 grid gap-x-12 gap-y-5 sm:grid-cols-2">
             <label className="grid gap-1 text-center text-sm font-medium text-white">
-              Nome Empresa
+              Empresa Solicitante
               <input
                 required
                 name="company_name"
@@ -250,7 +250,7 @@ export default function BookingForm({
             </label>
 
             <label className="grid gap-1 text-center text-sm font-medium text-white">
-              E-mail p/ envio do laudo
+              E-mail p/ envio do teste
               <input
                 required
                 type="email"
@@ -392,7 +392,7 @@ export default function BookingForm({
                       </svg>
                     </span>
                     <span className="flex-1 px-4 text-center">
-                      Anexar currículo
+                      Anexar arquivo
                     </span>
                   </button>
                 </div>

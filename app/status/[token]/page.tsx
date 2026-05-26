@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
@@ -46,93 +47,129 @@ export default async function StatusPage({ params }: StatusPageProps) {
 
   if (error || !booking) {
     return (
-      <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
-        <section className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Agendamento não encontrado
-          </h1>
-          <p className="mt-3 text-slate-600">
-            Verifique o link recebido ou solicite apoio à equipe da Lince.
-          </p>
-          <Link
-            href="/"
-            className="mt-6 inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
-          >
-            Voltar ao agendamento
-          </Link>
+      <main className="min-h-screen bg-[#5b2396] px-4 py-8 text-white sm:px-6 lg:px-8">
+        <section className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl flex-col items-center justify-center text-center">
+          <div className="flex h-[72px] w-[232px] items-center justify-center overflow-hidden rounded-full bg-[#8b2be8] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.08)] sm:h-[86px] sm:w-[284px]">
+            <Image
+              src="/lince-logo.png"
+              alt="Lince"
+              width={313}
+              height={109}
+              priority
+              unoptimized
+              className="h-full w-full object-contain"
+            />
+          </div>
+
+          <div className="mt-10 w-full rounded-[34px] bg-white p-8 text-[#1f1230] shadow-[12px_12px_0_rgba(0,0,0,0.28)] sm:p-10">
+            <h1 className="text-3xl font-black text-[#1f1230]">
+              Agendamento não encontrado
+            </h1>
+            <p className="mt-4 text-lg leading-8 text-slate-700">
+              Verifique o link recebido ou solicite apoio à equipe da Lince.
+            </p>
+            <Link
+              href="/"
+              className="mt-8 inline-flex items-center justify-center rounded-2xl bg-[#8b2be8] px-6 py-4 text-sm font-black uppercase tracking-wide text-white shadow-[6px_6px_0_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:bg-[#9d3cff]"
+            >
+              Voltar à página inicial
+            </Link>
+          </div>
         </section>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
-      <section className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Status do agendamento
-        </p>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-            {getStatusLabel(booking.status)}
-          </h1>
-          <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700">
-            Sala de Testes
-          </span>
+    <main className="min-h-screen bg-[#5b2396] px-4 py-8 text-white sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-4xl">
+        <div className="flex justify-center">
+          <div className="flex h-[72px] w-[232px] items-center justify-center overflow-hidden rounded-full bg-[#8b2be8] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.08)] sm:h-[86px] sm:w-[284px]">
+            <Image
+              src="/lince-logo.png"
+              alt="Lince"
+              width={313}
+              height={109}
+              priority
+              unoptimized
+              className="h-full w-full object-contain"
+            />
+          </div>
         </div>
 
-        <dl className="mt-8 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <dt className="text-sm font-medium text-slate-500">Empresa</dt>
-            <dd className="mt-1 font-semibold text-slate-900">
-              {booking.company_name}
-            </dd>
+        <div className="mt-8 rounded-[34px] bg-white p-6 text-[#1f1230] shadow-[12px_12px_0_rgba(0,0,0,0.28)] sm:p-8">
+          <p className="text-sm font-black uppercase tracking-wide text-[#5b2396]">
+            Status da solicitação
+          </p>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-3xl font-black tracking-tight text-[#1f1230]">
+              {getStatusLabel(booking.status)}
+            </h1>
+            <span className="w-fit rounded-full border border-[#8b2be8]/30 bg-[#efe4ff] px-4 py-2 text-sm font-black text-[#5b2396]">
+              Aplicação de Testes
+            </span>
           </div>
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <dt className="text-sm font-medium text-slate-500">Responsável</dt>
-            <dd className="mt-1 font-semibold text-slate-900">
-              {booking.contact_name}
-            </dd>
-          </div>
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <dt className="text-sm font-medium text-slate-500">Data</dt>
-            <dd className="mt-1 font-semibold capitalize text-slate-900">
-              {booking.test_room_sessions
-                ? formatDate(booking.test_room_sessions.session_date)
-                : "Não informada"}
-            </dd>
-          </div>
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <dt className="text-sm font-medium text-slate-500">Horário</dt>
-            <dd className="mt-1 font-semibold text-slate-900">
-              {booking.test_room_sessions
-                ? formatTime(booking.test_room_sessions.start_time)
-                : "Não informado"}
-            </dd>
-          </div>
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <dt className="text-sm font-medium text-slate-500">Candidatos</dt>
-            <dd className="mt-1 font-semibold text-slate-900">
-              {booking.candidates_count}
-            </dd>
-          </div>
-          {booking.notes ? (
-            <div className="rounded-2xl border border-slate-200 p-4 sm:col-span-2">
-              <dt className="text-sm font-medium text-slate-500">
-                Observações
+
+          <dl className="mt-8 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 p-4">
+              <dt className="text-sm font-semibold text-slate-500">
+                Empresa solicitante
               </dt>
-              <dd className="mt-1 whitespace-pre-wrap text-slate-900">
-                {booking.notes}
+              <dd className="mt-1 font-black text-[#1f1230]">
+                {booking.company_name}
               </dd>
             </div>
-          ) : null}
-        </dl>
+            <div className="rounded-2xl border border-slate-200 p-4">
+              <dt className="text-sm font-semibold text-slate-500">
+                Responsável
+              </dt>
+              <dd className="mt-1 font-black text-[#1f1230]">
+                {booking.contact_name}
+              </dd>
+            </div>
+            <div className="rounded-2xl border border-slate-200 p-4">
+              <dt className="text-sm font-semibold text-slate-500">Data</dt>
+              <dd className="mt-1 font-black capitalize text-[#1f1230]">
+                {booking.test_room_sessions
+                  ? formatDate(booking.test_room_sessions.session_date)
+                  : "Não informada"}
+              </dd>
+            </div>
+            <div className="rounded-2xl border border-slate-200 p-4">
+              <dt className="text-sm font-semibold text-slate-500">Horário</dt>
+              <dd className="mt-1 font-black text-[#1f1230]">
+                {booking.test_room_sessions
+                  ? formatTime(booking.test_room_sessions.start_time)
+                  : "Não informado"}
+              </dd>
+            </div>
+            <div className="rounded-2xl border border-slate-200 p-4">
+              <dt className="text-sm font-semibold text-slate-500">
+                Candidatos
+              </dt>
+              <dd className="mt-1 font-black text-[#1f1230]">
+                {booking.candidates_count}
+              </dd>
+            </div>
+            {booking.notes ? (
+              <div className="rounded-2xl border border-slate-200 p-4 sm:col-span-2">
+                <dt className="text-sm font-semibold text-slate-500">
+                  Observações
+                </dt>
+                <dd className="mt-1 whitespace-pre-wrap text-[#1f1230]">
+                  {booking.notes}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
 
-        <Link
-          href="/"
-          className="mt-8 inline-flex items-center justify-center rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-        >
-          Fazer novo agendamento
-        </Link>
+          <Link
+            href="/"
+            className="mt-8 inline-flex items-center justify-center rounded-2xl bg-[#8b2be8] px-6 py-4 text-sm font-black uppercase tracking-wide text-white shadow-[6px_6px_0_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:bg-[#9d3cff]"
+          >
+            Voltar à página inicial
+          </Link>
+        </div>
       </section>
     </main>
   );
