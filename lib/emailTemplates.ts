@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getCustomerConfirmationMessage } from "@/lib/assessmentMessages";
 import {
   ASSESSMENT_MODALITY_LABELS,
   type AssessmentModality,
@@ -24,6 +25,15 @@ type BookingEmailDetails = {
   sessionDate: string | null;
   startTime: string | null;
   statusUrl: string;
+};
+
+type NoShowEmailDetails = {
+  assessmentModality: AssessmentModality;
+  candidateName: string;
+  companyName: string;
+  desiredRole: string;
+  sessionDate: string | null;
+  startTime: string | null;
 };
 
 function escapeHtml(value: string | number | null | undefined) {
@@ -111,42 +121,101 @@ function renderLayout(title: string, rows: Array<[string, string | number]>) {
 
 export function buildCustomerBookingEmail(details: BookingEmailDetails) {
   const modalityLabel = ASSESSMENT_MODALITY_LABELS[details.assessmentModality];
+  const scheduleRows =
+    details.assessmentModality === "presencial"
+      ? [
+          ["Data", formatOptionalDate(details.sessionDate)] as [
+            string,
+            string | number,
+          ],
+          ["Horário", formatOptionalTime(details.startTime)] as [
+            string,
+            string | number,
+          ],
+        ]
+      : [];
 
   return {
-    html: renderLayout("Solicitação recebida - Avaliação Psicológica Lince", [
+    html: renderLayout(`${modalityLabel} - Lince`, [
+      ["Mensagem", getCustomerConfirmationMessage(details.assessmentModality)],
       ["Modalidade", modalityLabel],
-      ["Empresa do serviço", details.serviceCompanyLabel],
       ["Empresa solicitante", details.companyName],
-      ["Responsável", details.contactName],
-      ["Data", formatOptionalDate(details.sessionDate)],
-      ["Horário", formatOptionalTime(details.startTime)],
-      ["Quantidade de candidatos", details.candidatesCount],
+      ["Responsável pela solicitação", details.contactName],
+      ...scheduleRows,
       ["Candidatos", formatCandidates(details.candidates)],
-      ["Status", "Confirmado"],
       ["Link público de status", details.statusUrl],
     ]),
-    subject: "Solicitação recebida - Avaliação Psicológica Lince",
+    subject: `${modalityLabel} - Solicitação recebida`,
   };
 }
 
 export function buildLinceNotificationEmail(details: BookingEmailDetails) {
   const modalityLabel = ASSESSMENT_MODALITY_LABELS[details.assessmentModality];
+  const scheduleRows =
+    details.assessmentModality === "presencial"
+      ? [
+          ["Data", formatOptionalDate(details.sessionDate)] as [
+            string,
+            string | number,
+          ],
+          ["Horário", formatOptionalTime(details.startTime)] as [
+            string,
+            string | number,
+          ],
+        ]
+      : [
+          ["Data/Horário", "Sem data/horário, avaliação online."] as [
+            string,
+            string | number,
+          ],
+        ];
 
   return {
     html: renderLayout("Nova solicitação de Avaliação Psicológica", [
       ["Modalidade", modalityLabel],
-      ["Empresa do serviço", details.serviceCompanyLabel],
       ["Empresa solicitante", details.companyName],
-      ["Responsável", details.contactName],
-      ["E-mail", details.contactEmail],
-      ["Telefone", details.contactPhone || "Não informado"],
-      ["Data", formatOptionalDate(details.sessionDate)],
-      ["Horário", formatOptionalTime(details.startTime)],
-      ["Quantidade de candidatos", details.candidatesCount],
+      ["Responsável pela solicitação", details.contactName],
+      ["E-mail do responsável", details.contactEmail],
+      ["Telefone do responsável", details.contactPhone || "Não informado"],
+      ...scheduleRows,
       ["Candidatos", formatCandidates(details.candidates)],
       ["Observações", details.notes || "Sem observações."],
       ["Link para o painel", details.adminUrl],
     ]),
     subject: "Nova solicitação de Avaliação Psicológica",
+  };
+}
+
+export function buildCandidateNoShowEmail(details: NoShowEmailDetails) {
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://lince-agendamentos.vercel.app";
+  const scheduleRows =
+    details.assessmentModality === "presencial" &&
+    details.sessionDate &&
+    details.startTime
+      ? [
+          ["Data", formatOptionalDate(details.sessionDate)] as [
+            string,
+            string | number,
+          ],
+          ["Horário", formatOptionalTime(details.startTime)] as [
+            string,
+            string | number,
+          ],
+        ]
+      : [];
+
+  return {
+    html: renderLayout("Candidato não compareceu à avaliação agendada", [
+      [
+        "Mensagem",
+        `Informamos que o candidato não compareceu a avaliação agendada. Caso deseje realizar o reagendamento, fique à vontade para inserir as informações no link a seguir:\n${appUrl}`,
+      ],
+      ["Candidato", details.candidateName],
+      ["Cargo", details.desiredRole],
+      ["Empresa solicitante", details.companyName],
+      ...scheduleRows,
+    ]),
+    subject: "Candidato não compareceu à avaliação agendada",
   };
 }

@@ -13,12 +13,18 @@ type StatusUpdateFormProps = {
   currentStatus: BookingStatus;
 };
 
+const visibleStatusOptions = BOOKING_STATUSES.filter(
+  (status) => status !== "solicitado",
+);
+
 export default function StatusUpdateForm({
   bookingId,
   currentStatus,
 }: StatusUpdateFormProps) {
   const router = useRouter();
-  const [newStatus, setNewStatus] = useState<BookingStatus>(currentStatus);
+  const [newStatus, setNewStatus] = useState<BookingStatus>(
+    currentStatus === "solicitado" ? "confirmado" : currentStatus,
+  );
   const [note, setNote] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -87,7 +93,7 @@ export default function StatusUpdateForm({
             }
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none transition focus:border-slate-900"
           >
-            {BOOKING_STATUSES.map((status) => (
+            {visibleStatusOptions.map((status) => (
               <option key={status} value={status}>
                 {BOOKING_STATUS_LABELS[status]}
               </option>

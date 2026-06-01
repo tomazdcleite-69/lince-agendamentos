@@ -7,8 +7,10 @@ import { getServiceCompanyLabel } from "@/lib/serviceCompany";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
   BOOKING_STATUS_LABELS,
+  CANDIDATE_STATUS_LABELS,
   type BookingStatus,
   type BookingWithSession,
+  type CandidateStatus,
 } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +39,10 @@ function getStatusLabel(status: BookingStatus) {
   return BOOKING_STATUS_LABELS[status] ?? status;
 }
 
+function getCandidateStatusLabel(status: CandidateStatus) {
+  return CANDIDATE_STATUS_LABELS[status] ?? status;
+}
+
 function DetailItem({
   label,
   value,
@@ -61,7 +67,7 @@ export default async function AdminBookingPage({
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select(
-      "id, session_id, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, service_company, status, public_token, created_at, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_name, desired_role, resume_url, created_at)",
+      "id, session_id, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, service_company, status, public_token, created_at, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_name, desired_role, candidate_phone, candidate_email, candidate_status, admin_notes, no_show_notified_at, resume_url, created_at)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -140,7 +146,10 @@ export default async function AdminBookingPage({
               label="Empresa do serviço"
               value={getServiceCompanyLabel(booking.service_company)}
             />
-            <DetailItem label="Responsável" value={booking.contact_name} />
+            <DetailItem
+              label="Responsável pela Solicitação"
+              value={booking.contact_name}
+            />
             <DetailItem label="E-mail" value={booking.contact_email} />
             <DetailItem
               label="Telefone"
@@ -196,27 +205,61 @@ export default async function AdminBookingPage({
               {candidates.map((candidate, index) => (
                 <li
                   key={candidate.id}
-                  className="grid gap-3 px-4 py-4 sm:grid-cols-[48px_1fr_1fr] sm:items-center"
+                  className="grid gap-4 px-4 py-4 sm:grid-cols-[48px_1fr] sm:items-start"
                 >
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#efe4ff] text-sm font-black text-[#5b2396]">
                     {index + 1}
                   </span>
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Nome do candidato
-                    </p>
-                    <p className="font-semibold text-slate-900">
-                      {candidate.candidate_name}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Cargo pretendido
-                    </p>
-                    <p className="font-semibold text-slate-900">
-                      {candidate.desired_role}
-                    </p>
-                  </div>
+                  <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                      <dt className="text-sm font-medium text-slate-500">
+                        Nome do candidato
+                      </dt>
+                      <dd className="font-semibold text-slate-900">
+                        {candidate.candidate_name}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-500">
+                        Cargo pretendido
+                      </dt>
+                      <dd className="font-semibold text-slate-900">
+                        {candidate.desired_role}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-500">
+                        Telefone
+                      </dt>
+                      <dd className="font-semibold text-slate-900">
+                        {candidate.candidate_phone || "Não informado"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-500">
+                        E-mail
+                      </dt>
+                      <dd className="font-semibold text-slate-900">
+                        {candidate.candidate_email || "Não informado"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-500">
+                        Status do candidato
+                      </dt>
+                      <dd className="font-semibold text-slate-900">
+                        {getCandidateStatusLabel(candidate.candidate_status)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-500">
+                        Observação interna
+                      </dt>
+                      <dd className="whitespace-pre-wrap font-semibold text-slate-900">
+                        {candidate.admin_notes || "Sem observação interna."}
+                      </dd>
+                    </div>
+                  </dl>
                 </li>
               ))}
             </ul>

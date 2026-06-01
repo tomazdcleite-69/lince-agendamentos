@@ -35,12 +35,19 @@ export const CANDIDATE_STATUSES = [
 
 export type CandidateStatus = (typeof CANDIDATE_STATUSES)[number];
 
+export const CANDIDATE_STATUS_LABELS: Record<CandidateStatus, string> = {
+  cancelado: "Cancelado",
+  confirmado: "Confirmado",
+  nao_compareceu: "Não compareceu",
+  realizado: "Realizado",
+};
+
 export const SERVICE_COMPANIES = ["lince", "psicoespaco"] as const;
 
 export type ServiceCompany = (typeof SERVICE_COMPANIES)[number];
 
 export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
-  solicitado: "Solicitado",
+  solicitado: "Confirmado",
   confirmado: "Confirmado",
   aguardando_informacoes: "Aguardando informações",
   cancelado: "Cancelado",

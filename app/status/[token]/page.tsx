@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import {
   ASSESSMENT_MODALITY_LABELS,
   BOOKING_STATUS_LABELS,
+  CANDIDATE_STATUS_LABELS,
   type BookingStatus,
   type BookingWithSession,
 } from "@/types";
@@ -39,12 +40,16 @@ export default async function StatusPage({ params }: StatusPageProps) {
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select(
-      "id, session_id, assessment_modality, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, status, public_token, created_at, test_room_sessions(session_date, start_time)",
+      "id, session_id, assessment_modality, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, status, public_token, created_at, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_name, desired_role, candidate_status, created_at)",
     )
     .eq("public_token", token)
     .maybeSingle();
 
   const booking = data as unknown as BookingWithSession | null;
+  const candidates = [...(booking?.booking_candidates ?? [])].sort((a, b) =>
+    a.created_at.localeCompare(b.created_at),
+  );
+  const isOnline = booking?.assessment_modality === "online";
 
   if (error || !booking) {
     return (
@@ -130,34 +135,96 @@ export default async function StatusPage({ params }: StatusPageProps) {
             </div>
             <div className="rounded-2xl border border-slate-200 p-4">
               <dt className="text-sm font-semibold text-slate-500">
-                Responsável
+                Responsável pela Solicitação
               </dt>
               <dd className="mt-1 font-black text-[#1f1230]">
                 {booking.contact_name}
               </dd>
             </div>
-            <div className="rounded-2xl border border-slate-200 p-4">
-              <dt className="text-sm font-semibold text-slate-500">Data</dt>
-              <dd className="mt-1 font-black capitalize text-[#1f1230]">
-                {booking.test_room_sessions
-                  ? formatDate(booking.test_room_sessions.session_date)
-                  : "Não se aplica"}
-              </dd>
-            </div>
-            <div className="rounded-2xl border border-slate-200 p-4">
-              <dt className="text-sm font-semibold text-slate-500">Horário</dt>
-              <dd className="mt-1 font-black text-[#1f1230]">
-                {booking.test_room_sessions
-                  ? formatTime(booking.test_room_sessions.start_time)
-                  : "Não se aplica"}
-              </dd>
-            </div>
-            <div className="rounded-2xl border border-slate-200 p-4">
+            {isOnline ? (
+              <div className="rounded-2xl border border-slate-200 p-4 sm:col-span-2">
+                <dt className="text-sm font-semibold text-slate-500">
+                  Data e horário
+                </dt>
+                <dd className="mt-1 font-black text-[#1f1230]">
+                  Avaliação Online, sem data ou horário presencial
+                </dd>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-2xl border border-slate-200 p-4">
+                  <dt className="text-sm font-semibold text-slate-500">
+                    Data
+                  </dt>
+                  <dd className="mt-1 font-black capitalize text-[#1f1230]">
+                    {booking.test_room_sessions
+                      ? formatDate(booking.test_room_sessions.session_date)
+                      : "Não informada"}
+                  </dd>
+                </div>
+                <div className="rounded-2xl border border-slate-200 p-4">
+                  <dt className="text-sm font-semibold text-slate-500">
+                    Horário
+                  </dt>
+                  <dd className="mt-1 font-black text-[#1f1230]">
+                    {booking.test_room_sessions
+                      ? formatTime(booking.test_room_sessions.start_time)
+                      : "Não informado"}
+                  </dd>
+                </div>
+              </>
+            )}
+            <div className="rounded-2xl border border-slate-200 p-4 sm:col-span-2">
               <dt className="text-sm font-semibold text-slate-500">
                 Candidatos
               </dt>
-              <dd className="mt-1 font-black text-[#1f1230]">
-                {booking.candidates_count}
+              <dd className="mt-3">
+                {candidates.length > 0 ? (
+                  <ul className="divide-y divide-slate-200 rounded-2xl border border-slate-200">
+                    {candidates.map((candidate, index) => (
+                      <li
+                        key={candidate.id}
+                        className="grid gap-3 px-4 py-4 sm:grid-cols-[44px_1fr_1fr_1fr] sm:items-center"
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#efe4ff] text-sm font-black text-[#5b2396]">
+                          {index + 1}
+                        </span>
+                        <span>
+                          <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Nome
+                          </span>
+                          <span className="font-black text-[#1f1230]">
+                            {candidate.candidate_name}
+                          </span>
+                        </span>
+                        <span>
+                          <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Cargo
+                          </span>
+                          <span className="font-black text-[#1f1230]">
+                            {candidate.desired_role}
+                          </span>
+                        </span>
+                        <span>
+                          <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Status
+                          </span>
+                          <span className="font-black text-[#1f1230]">
+                            {
+                              CANDIDATE_STATUS_LABELS[
+                                candidate.candidate_status
+                              ]
+                            }
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="font-black text-[#1f1230]">
+                    {booking.candidates_count}
+                  </span>
+                )}
               </dd>
             </div>
             {booking.notes ? (
