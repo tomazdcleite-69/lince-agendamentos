@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
+  ASSESSMENT_MODALITY_LABELS,
   BOOKING_STATUS_LABELS,
   type BookingStatus,
   type BookingWithSession,
@@ -38,7 +39,7 @@ export default async function StatusPage({ params }: StatusPageProps) {
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select(
-      "id, session_id, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, status, public_token, created_at, test_room_sessions(session_date, start_time)",
+      "id, session_id, assessment_modality, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, status, public_token, created_at, test_room_sessions(session_date, start_time)",
     )
     .eq("public_token", token)
     .maybeSingle();
@@ -113,6 +114,14 @@ export default async function StatusPage({ params }: StatusPageProps) {
           <dl className="mt-8 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 p-4">
               <dt className="text-sm font-semibold text-slate-500">
+                Modalidade
+              </dt>
+              <dd className="mt-1 font-black text-[#1f1230]">
+                {ASSESSMENT_MODALITY_LABELS[booking.assessment_modality]}
+              </dd>
+            </div>
+            <div className="rounded-2xl border border-slate-200 p-4">
+              <dt className="text-sm font-semibold text-slate-500">
                 Empresa solicitante
               </dt>
               <dd className="mt-1 font-black text-[#1f1230]">
@@ -132,7 +141,7 @@ export default async function StatusPage({ params }: StatusPageProps) {
               <dd className="mt-1 font-black capitalize text-[#1f1230]">
                 {booking.test_room_sessions
                   ? formatDate(booking.test_room_sessions.session_date)
-                  : "Não informada"}
+                  : "Não se aplica"}
               </dd>
             </div>
             <div className="rounded-2xl border border-slate-200 p-4">
@@ -140,7 +149,7 @@ export default async function StatusPage({ params }: StatusPageProps) {
               <dd className="mt-1 font-black text-[#1f1230]">
                 {booking.test_room_sessions
                   ? formatTime(booking.test_room_sessions.start_time)
-                  : "Não informado"}
+                  : "Não se aplica"}
               </dd>
             </div>
             <div className="rounded-2xl border border-slate-200 p-4">

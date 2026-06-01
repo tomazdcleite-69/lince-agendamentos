@@ -92,7 +92,7 @@ export function isSessionBookable(
   today = getTodayInSaoPauloDateKey(),
 ) {
   return (
-    session.session_date > today &&
+    session.session_date >= today &&
     session.status === "aberta" &&
     Number(session.available_spots) > 0
   );

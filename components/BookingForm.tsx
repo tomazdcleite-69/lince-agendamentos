@@ -3,9 +3,14 @@
 import { FormEvent, useMemo, useState } from "react";
 import ScheduleGrid from "@/components/ScheduleGrid";
 import { getTodayInSaoPauloDateKey, isSessionBookable } from "@/lib/scheduleGrid";
-import type { ServiceCompany, TestRoomSessionWithAvailability } from "@/types";
+import type {
+  AssessmentModality,
+  ServiceCompany,
+  TestRoomSessionWithAvailability,
+} from "@/types";
 
 type BookingFormProps = {
+  assessmentModality: AssessmentModality;
   serviceCompany: ServiceCompany;
   sessions: TestRoomSessionWithAvailability[];
 };
@@ -20,6 +25,8 @@ type FormState = {
 
 type CandidateForm = {
   candidate_name: string;
+  candidate_email: string;
+  candidate_phone: string;
   desired_role: string;
   id: string;
 };
@@ -35,18 +42,25 @@ const initialFormState: FormState = {
 function createEmptyCandidate(): CandidateForm {
   return {
     candidate_name: "",
+    candidate_email: "",
+    candidate_phone: "",
     desired_role: "",
     id: crypto.randomUUID(),
   };
 }
 
 export default function BookingForm({
+  assessmentModality,
   serviceCompany,
   sessions,
 }: BookingFormProps) {
   const today = getTodayInSaoPauloDateKey();
+  const isOnline = assessmentModality === "online";
+  const isPresencial = assessmentModality === "presencial";
   const initialSessionId =
-    sessions.find((session) => isSessionBookable(session, today))?.id ?? "";
+    isPresencial
+      ? sessions.find((session) => isSessionBookable(session, today))?.id ?? ""
+      : "";
 
   const [sessionId, setSessionId] = useState(initialSessionId);
   const [form, setForm] = useState<FormState>(initialFormState);
@@ -61,14 +75,16 @@ export default function BookingForm({
     [sessions, sessionId],
   );
   const hasAvailableSession = useMemo(
-    () => sessions.some((session) => isSessionBookable(session, today)),
-    [sessions, today],
+    () =>
+      isPresencial &&
+      sessions.some((session) => isSessionBookable(session, today)),
+    [isPresencial, sessions, today],
   );
   const selectedCapacity = selectedSession
     ? Number(selectedSession.available_spots)
     : 0;
   const isAtCapacity =
-    !selectedSession || candidates.length >= selectedCapacity;
+    isPresencial && (!selectedSession || candidates.length >= selectedCapacity);
 
   function updateField(field: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -111,7 +127,11 @@ export default function BookingForm({
 
   function updateCandidate(
     candidateId: string,
-    field: "candidate_name" | "desired_role",
+    field:
+      | "candidate_email"
+      | "candidate_name"
+      | "candidate_phone"
+      | "desired_role",
     value: string,
   ) {
     setCandidates((current) =>
@@ -129,13 +149,15 @@ export default function BookingForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!selectedSession) {
+    if (isPresencial && !selectedSession) {
       setError("Escolha uma data disponível para continuar.");
       return;
     }
 
     const normalizedCandidates = candidates.map((candidate) => ({
       candidate_name: candidate.candidate_name.trim(),
+      candidate_email: candidate.candidate_email.trim().toLowerCase(),
+      candidate_phone: candidate.candidate_phone.trim(),
       desired_role: candidate.desired_role.trim(),
     }));
 
@@ -153,7 +175,15 @@ export default function BookingForm({
       return;
     }
 
-    if (normalizedCandidates.length > selectedCapacity) {
+    if (
+      isOnline &&
+      normalizedCandidates.some((candidate) => !candidate.candidate_phone)
+    ) {
+      setError("Informe o telefone de todos os candidatos da avaliação online.");
+      return;
+    }
+
+    if (isPresencial && normalizedCandidates.length > selectedCapacity) {
       setError(
         `A data escolhida possui apenas ${selectedCapacity} vagas disponíveis.`,
       );
@@ -167,9 +197,10 @@ export default function BookingForm({
       const response = await fetch("/api/bookings", {
         body: JSON.stringify({
           ...form,
+          assessment_modality: assessmentModality,
           candidates: normalizedCandidates,
           service_company: serviceCompany,
-          session_id: selectedSession.id,
+          session_id: selectedSession?.id ?? null,
         }),
         headers: {
           "Content-Type": "application/json",
@@ -201,13 +232,28 @@ export default function BookingForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-9">
-      <ScheduleGrid
-        sessions={sessions}
-        selectedSessionId={sessionId}
-        onSelectSession={handleSessionChange}
-      />
+      {isPresencial ? (
+        <ScheduleGrid
+          sessions={sessions}
+          selectedSessionId={sessionId}
+          onSelectSession={handleSessionChange}
+        />
+      ) : (
+        <section className="rounded-[22px] border-[3px] border-black bg-white p-6 text-center text-[#1f1230] shadow-[0_10px_0_rgba(0,0,0,0.22)]">
+          <p className="text-sm font-black uppercase tracking-wide text-[#5b2396]">
+            Avaliação Online
+          </p>
+          <h2 className="mt-2 text-2xl font-black">
+            Não é necessário escolher data ou horário.
+          </h2>
+          <p className="mt-2 text-sm font-semibold text-slate-600">
+            Preencha os dados da empresa e dos candidatos para registrar a
+            solicitação.
+          </p>
+        </section>
+      )}
 
-      {!hasAvailableSession ? (
+      {isPresencial && !hasAvailableSession ? (
         <p className="rounded-2xl border border-white/30 bg-white/15 px-5 py-4 text-sm font-semibold text-white">
           Nenhuma data disponível no momento. Entre em contato com a equipe da
           Lince para verificar novas datas.
@@ -236,7 +282,7 @@ export default function BookingForm({
             </label>
 
             <label className="grid gap-1 text-center text-sm font-medium text-white">
-              Responsável
+              Responsável pela Solicitação
               <input
                 required
                 name="contact_name"
@@ -372,29 +418,39 @@ export default function BookingForm({
                     />
                   </label>
 
-                  <button
-                    type="button"
-                    title="Upload de currículo será implementado depois"
-                    className="flex h-14 items-center overflow-hidden rounded-full bg-white text-sm font-medium text-slate-950 shadow-inner sm:col-span-2 sm:max-w-sm"
-                  >
-                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#2b2431] text-white">
-                      <svg
-                        aria-hidden="true"
-                        viewBox="0 0 24 24"
-                        className="h-7 w-7"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2.2"
-                      >
-                        <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                      </svg>
-                    </span>
-                    <span className="flex-1 px-4 text-center">
-                      Anexar arquivo
-                    </span>
-                  </button>
+                  <label className="grid gap-1 text-center text-sm font-medium text-white">
+                    Telefone do candidato{isOnline ? "" : " (opcional)"}
+                    <input
+                      required={isOnline}
+                      value={candidate.candidate_phone}
+                      onChange={(event) =>
+                        updateCandidate(
+                          candidate.id,
+                          "candidate_phone",
+                          event.target.value,
+                        )
+                      }
+                      className="h-14 rounded-full border-0 bg-white px-6 text-center text-slate-950 shadow-inner outline-none transition placeholder:text-slate-700 focus:ring-4 focus:ring-white/40"
+                      placeholder="Escreva aqui"
+                    />
+                  </label>
+
+                  <label className="grid gap-1 text-center text-sm font-medium text-white">
+                    E-mail do candidato (opcional)
+                    <input
+                      type="email"
+                      value={candidate.candidate_email}
+                      onChange={(event) =>
+                        updateCandidate(
+                          candidate.id,
+                          "candidate_email",
+                          event.target.value,
+                        )
+                      }
+                      className="h-14 rounded-full border-0 bg-white px-6 text-center text-slate-950 shadow-inner outline-none transition placeholder:text-slate-700 focus:ring-4 focus:ring-white/40"
+                      placeholder="Escreva aqui"
+                    />
+                  </label>
                 </div>
               </div>
             ))}
@@ -411,7 +467,7 @@ export default function BookingForm({
       <div className="flex justify-center">
         <button
           type="submit"
-          disabled={isSubmitting || !selectedSession}
+          disabled={isSubmitting || (isPresencial && !selectedSession)}
           className="rounded-2xl bg-black px-8 py-4 text-base font-black uppercase tracking-wide text-white shadow-[10px_10px_0_rgba(0,0,0,0.35)] transition hover:-translate-y-0.5 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-55"
         >
           {isSubmitting ? "Enviando..." : "Confirmar agendamento"}

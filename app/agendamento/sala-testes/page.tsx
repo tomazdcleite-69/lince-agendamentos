@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import BookingForm from "@/components/BookingForm";
+import { normalizeAssessmentModality } from "@/lib/assessmentModality";
 import {
   getScheduleGridRange,
   getTodayInSaoPauloDateKey,
@@ -18,6 +19,7 @@ export const dynamic = "force-dynamic";
 type SalaTestesPageProps = {
   searchParams: Promise<{
     empresa?: string | string[];
+    modalidade?: string | string[];
   }>;
 };
 
@@ -35,8 +37,9 @@ function normalizeSession(
 export default async function SalaTestesPage({
   searchParams,
 }: SalaTestesPageProps) {
-  const { empresa } = await searchParams;
+  const { empresa, modalidade } = await searchParams;
   const serviceCompany = normalizeServiceCompany(empresa);
+  const assessmentModality = normalizeAssessmentModality(modalidade);
   const serviceCompanyName = getServiceCompanyPortalName(serviceCompany);
   const serviceCompanyLogo = getServiceCompanyLogo(serviceCompany);
   const serviceCompanyLogoSize =
@@ -46,15 +49,22 @@ export default async function SalaTestesPage({
   const today = getTodayInSaoPauloDateKey();
   const { endDate, startDate } = getScheduleGridRange(today);
 
-  const { data, error } = await supabaseAdmin
-    .from("test_room_sessions_with_availability")
-    .select("*")
-    .gte("session_date", startDate)
-    .lte("session_date", endDate)
-    .order("session_date", { ascending: true })
-    .order("start_time", { ascending: true });
+  const { data, error } =
+    assessmentModality === "presencial"
+      ? await supabaseAdmin
+          .from("test_room_sessions_with_availability")
+          .select("*")
+          .gte("session_date", startDate)
+          .lte("session_date", endDate)
+          .order("session_date", { ascending: true })
+          .order("start_time", { ascending: true })
+      : { data: [], error: null };
 
   const sessions = (data ?? []).map(normalizeSession);
+  const subtitle =
+    assessmentModality === "online"
+      ? "Avaliação Online - Lince"
+      : "Aplicação de Testes - Lince";
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#5b2396] px-4 py-5 text-white sm:px-7 lg:px-8">
@@ -77,7 +87,7 @@ export default async function SalaTestesPage({
               AGENDA AVALIAÇÕES PSICOLÓGICAS
             </h1>
             <p className="mt-2 text-base font-semibold text-white/90 sm:text-lg">
-              Aplicação de Testes - Lince
+              {subtitle}
             </p>
           </div>
 
@@ -100,6 +110,7 @@ export default async function SalaTestesPage({
           </section>
         ) : (
           <BookingForm
+            assessmentModality={assessmentModality}
             serviceCompany={serviceCompany}
             sessions={sessions}
           />

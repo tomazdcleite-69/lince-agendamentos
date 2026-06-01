@@ -9,7 +9,7 @@ type CompanyCard = {
 
 const companyCards: CompanyCard[] = [
   {
-    href: "/agendamento/sala-testes?empresa=lince",
+    href: "/agendamento/avaliacao-psicologica",
     title: "Avaliação Psicológica",
   },
   {

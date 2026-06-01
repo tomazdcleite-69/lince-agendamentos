@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { normalizeAssessmentModality } from "@/lib/assessmentModality";
 import {
   buildCustomerBookingEmail,
   buildLinceNotificationEmail,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/serviceCompany";
 import { supabaseAdmin } from "@/lib/supabase";
 import { generatePublicToken } from "@/lib/tokens";
+import type { AssessmentModality } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -18,6 +20,8 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type CandidateInput = {
   candidate_name: string;
+  candidate_email: string | null;
+  candidate_phone: string | null;
   desired_role: string;
 };
 
@@ -37,7 +41,10 @@ function getString(payload: Record<string, unknown>, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function getCandidates(value: unknown): CandidateParseResult {
+function getCandidates(
+  value: unknown,
+  assessmentModality: AssessmentModality,
+): CandidateParseResult {
   if (!Array.isArray(value)) {
     return {
       error: "Informe a lista de candidatos.",
@@ -56,6 +63,8 @@ function getCandidates(value: unknown): CandidateParseResult {
 
     return {
       candidate_name: getString(candidate, "candidate_name"),
+      candidate_email: getString(candidate, "candidate_email").toLowerCase(),
+      candidate_phone: getString(candidate, "candidate_phone"),
       desired_role: getString(candidate, "desired_role"),
     };
   });
@@ -70,8 +79,33 @@ function getCandidates(value: unknown): CandidateParseResult {
     };
   }
 
+  if (
+    assessmentModality === "online" &&
+    candidates.some((candidate) => !candidate.candidate_phone)
+  ) {
+    return {
+      error: "Informe o telefone de todos os candidatos da avaliação online.",
+    };
+  }
+
+  if (
+    candidates.some(
+      (candidate) =>
+        candidate.candidate_email &&
+        !emailPattern.test(candidate.candidate_email),
+    )
+  ) {
+    return {
+      error: "Informe e-mails válidos para os candidatos.",
+    };
+  }
+
   return {
-    candidates,
+    candidates: candidates.map((candidate) => ({
+      ...candidate,
+      candidate_email: candidate.candidate_email || null,
+      candidate_phone: candidate.candidate_phone || null,
+    })),
   };
 }
 
@@ -158,14 +192,21 @@ export async function POST(request: Request) {
   const contactEmail = getString(payload, "contact_email").toLowerCase();
   const contactPhone = getString(payload, "contact_phone");
   const notes = getString(payload, "notes");
-  const parsedCandidates = getCandidates(payload.candidates);
+  const assessmentModality = normalizeAssessmentModality(
+    getString(payload, "assessment_modality"),
+  );
+  const parsedCandidates = getCandidates(payload.candidates, assessmentModality);
   const serviceCompany = normalizeServiceCompany(
     getString(payload, "service_company"),
   );
   const serviceCompanyLabel = getServiceCompanyLabel(serviceCompany);
 
-  if (!sessionId) {
+  if (assessmentModality === "presencial" && !sessionId) {
     return errorResponse("Escolha uma data para agendar.");
+  }
+
+  if (assessmentModality === "online" && sessionId) {
+    return errorResponse("Avaliação online não utiliza data ou horário.");
   }
 
   if (!companyName) {
@@ -187,34 +228,45 @@ export async function POST(request: Request) {
   const candidates: CandidateInput[] = parsedCandidates.candidates;
   const candidatesCount = candidates.length;
 
-  const { data: session, error: sessionError } = await supabaseAdmin
-    .from("test_room_sessions_with_availability")
-    .select("*")
-    .eq("id", sessionId)
-    .maybeSingle();
+  const sessionResult =
+    assessmentModality === "presencial"
+      ? await supabaseAdmin
+          .from("test_room_sessions_with_availability")
+          .select("*")
+          .eq("id", sessionId)
+          .maybeSingle()
+      : { data: null, error: null };
+
+  const { data: session, error: sessionError } = sessionResult;
 
   if (sessionError) {
     return errorResponse("Não foi possível consultar a data escolhida.", 500);
   }
 
-  if (!session) {
+  if (assessmentModality === "presencial" && !session) {
     return errorResponse("A data escolhida não foi encontrada.", 404);
   }
 
-  const availableSpots = Number(session.available_spots);
+  const availableSpots = session ? Number(session.available_spots) : 0;
   const today = getTodayInSaoPauloDateKey();
 
-  if (session.session_date <= today) {
-    return errorResponse(
-      "Agendamentos devem ser feitos com pelo menos um dia de antecedência.",
-    );
+  if (
+    assessmentModality === "presencial" &&
+    session &&
+    session.session_date < today
+  ) {
+    return errorResponse("Não é possível agendar datas anteriores a hoje.");
   }
 
-  if (session.status !== "aberta") {
+  if (
+    assessmentModality === "presencial" &&
+    session &&
+    session.status !== "aberta"
+  ) {
     return errorResponse("A data escolhida não está aberta para agendamento.");
   }
 
-  if (availableSpots < candidatesCount) {
+  if (assessmentModality === "presencial" && availableSpots < candidatesCount) {
     return errorResponse(
       `A data escolhida possui apenas ${availableSpots} vagas disponíveis.`,
     );
@@ -224,6 +276,7 @@ export async function POST(request: Request) {
   const { data: booking, error: bookingError } = await supabaseAdmin
     .from("bookings")
     .insert({
+      assessment_modality: assessmentModality,
       candidates_count: candidatesCount,
       company_name: companyName,
       contact_email: contactEmail,
@@ -232,8 +285,8 @@ export async function POST(request: Request) {
       notes: notes || null,
       public_token: publicToken,
       service_company: serviceCompany,
-      session_id: sessionId,
-      status: "solicitado",
+      session_id: assessmentModality === "presencial" ? sessionId : null,
+      status: "confirmado",
     })
     .select("id, public_token")
     .single();
@@ -248,6 +301,9 @@ export async function POST(request: Request) {
       candidates.map((candidate) => ({
         booking_id: booking.id,
         candidate_name: candidate.candidate_name,
+        candidate_email: candidate.candidate_email,
+        candidate_phone: candidate.candidate_phone,
+        candidate_status: "confirmado",
         desired_role: candidate.desired_role,
       })),
     );
@@ -266,8 +322,11 @@ export async function POST(request: Request) {
     .insert({
       booking_id: booking.id,
       changed_by: "cliente",
-      new_status: "solicitado",
-      note: "Agendamento criado pelo formulário público.",
+      new_status: "confirmado",
+      note:
+        assessmentModality === "online"
+          ? "Solicitação de avaliação online registrada pelo formulário público."
+          : "Agendamento presencial confirmado pelo formulário público.",
       old_status: null,
     });
 
@@ -290,9 +349,12 @@ export async function POST(request: Request) {
     const baseUrl = getBaseUrl(request);
     const emailDetails = {
       adminUrl: `${baseUrl}/admin`,
+      assessmentModality,
       candidatesCount,
       candidates: candidates.map((candidate) => ({
+        candidateEmail: candidate.candidate_email,
         candidateName: candidate.candidate_name,
+        candidatePhone: candidate.candidate_phone,
         desiredRole: candidate.desired_role,
       })),
       companyName,
@@ -301,8 +363,8 @@ export async function POST(request: Request) {
       contactPhone: contactPhone || null,
       notes: notes || null,
       serviceCompanyLabel,
-      sessionDate: session.session_date,
-      startTime: session.start_time,
+      sessionDate: session?.session_date ?? null,
+      startTime: session?.start_time ?? null,
       statusUrl: `${baseUrl}/status/${booking.public_token}`,
     };
     const customerEmail = buildCustomerBookingEmail(emailDetails);

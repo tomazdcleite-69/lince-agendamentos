@@ -17,6 +17,24 @@ export const BOOKING_STATUSES = [
 
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
+export const ASSESSMENT_MODALITIES = ["presencial", "online"] as const;
+
+export type AssessmentModality = (typeof ASSESSMENT_MODALITIES)[number];
+
+export const ASSESSMENT_MODALITY_LABELS: Record<AssessmentModality, string> = {
+  online: "Avaliação Online",
+  presencial: "Avaliação Presencial",
+};
+
+export const CANDIDATE_STATUSES = [
+  "confirmado",
+  "realizado",
+  "nao_compareceu",
+  "cancelado",
+] as const;
+
+export type CandidateStatus = (typeof CANDIDATE_STATUSES)[number];
+
 export const SERVICE_COMPANIES = ["lince", "psicoespaco"] as const;
 
 export type ServiceCompany = (typeof SERVICE_COMPANIES)[number];
@@ -51,7 +69,8 @@ export type TestRoomSessionWithAvailability = {
 
 export type Booking = {
   id: string;
-  session_id: string;
+  session_id: string | null;
+  assessment_modality: AssessmentModality;
   company_name: string;
   contact_name: string;
   contact_email: string;
@@ -69,6 +88,11 @@ export type BookingCandidate = {
   booking_id: string;
   candidate_name: string;
   desired_role: string;
+  candidate_phone: string | null;
+  candidate_email: string | null;
+  candidate_status: CandidateStatus;
+  admin_notes: string | null;
+  no_show_notified_at: string | null;
   resume_url: string | null;
   created_at: string;
 };
@@ -114,7 +138,8 @@ export type Database = {
         Booking,
         {
           id?: string;
-          session_id: string;
+          session_id?: string | null;
+          assessment_modality?: AssessmentModality;
           company_name: string;
           contact_name: string;
           contact_email: string;
@@ -135,6 +160,11 @@ export type Database = {
           booking_id: string;
           candidate_name: string;
           desired_role: string;
+          candidate_phone?: string | null;
+          candidate_email?: string | null;
+          candidate_status?: CandidateStatus;
+          admin_notes?: string | null;
+          no_show_notified_at?: string | null;
           resume_url?: string | null;
           created_at?: string;
         },

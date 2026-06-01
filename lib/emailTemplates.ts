@@ -1,9 +1,17 @@
 import "server-only";
 
+import {
+  ASSESSMENT_MODALITY_LABELS,
+  type AssessmentModality,
+} from "@/types";
+
 type BookingEmailDetails = {
   adminUrl: string;
+  assessmentModality: AssessmentModality;
   candidates: Array<{
+    candidateEmail: string | null;
     candidateName: string;
+    candidatePhone: string | null;
     desiredRole: string;
   }>;
   candidatesCount: number;
@@ -13,8 +21,8 @@ type BookingEmailDetails = {
   contactPhone: string | null;
   notes: string | null;
   serviceCompanyLabel: string;
-  sessionDate: string;
-  startTime: string;
+  sessionDate: string | null;
+  startTime: string | null;
   statusUrl: string;
 };
 
@@ -37,16 +45,31 @@ function formatDate(date: string) {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
-function formatTime(time: string) {
-  return time.slice(0, 5);
+function formatOptionalDate(date: string | null) {
+  return date ? formatDate(date) : "Não se aplica";
+}
+
+function formatOptionalTime(time: string | null) {
+  return time ? time.slice(0, 5) : "Não se aplica";
 }
 
 function formatCandidates(candidates: BookingEmailDetails["candidates"]) {
   return candidates
-    .map(
-      (candidate, index) =>
+    .map((candidate, index) => {
+      const details = [
         `${index + 1}. ${candidate.candidateName} - ${candidate.desiredRole}`,
-    )
+      ];
+
+      if (candidate.candidatePhone) {
+        details.push(`Telefone: ${candidate.candidatePhone}`);
+      }
+
+      if (candidate.candidateEmail) {
+        details.push(`E-mail: ${candidate.candidateEmail}`);
+      }
+
+      return details.join("\n");
+    })
     .join("\n");
 }
 
@@ -87,37 +110,43 @@ function renderLayout(title: string, rows: Array<[string, string | number]>) {
 }
 
 export function buildCustomerBookingEmail(details: BookingEmailDetails) {
+  const modalityLabel = ASSESSMENT_MODALITY_LABELS[details.assessmentModality];
+
   return {
-    html: renderLayout("Agendamento recebido - Sala de Testes Lince", [
+    html: renderLayout("Solicitação recebida - Avaliação Psicológica Lince", [
+      ["Modalidade", modalityLabel],
       ["Empresa do serviço", details.serviceCompanyLabel],
-      ["Empresa", details.companyName],
+      ["Empresa solicitante", details.companyName],
       ["Responsável", details.contactName],
-      ["Data", formatDate(details.sessionDate)],
-      ["Horário", formatTime(details.startTime)],
+      ["Data", formatOptionalDate(details.sessionDate)],
+      ["Horário", formatOptionalTime(details.startTime)],
       ["Quantidade de candidatos", details.candidatesCount],
       ["Candidatos", formatCandidates(details.candidates)],
-      ["Status", "Solicitado"],
+      ["Status", "Confirmado"],
       ["Link público de status", details.statusUrl],
     ]),
-    subject: "Agendamento recebido - Sala de Testes Lince",
+    subject: "Solicitação recebida - Avaliação Psicológica Lince",
   };
 }
 
 export function buildLinceNotificationEmail(details: BookingEmailDetails) {
+  const modalityLabel = ASSESSMENT_MODALITY_LABELS[details.assessmentModality];
+
   return {
-    html: renderLayout("Novo agendamento de Sala de Testes", [
+    html: renderLayout("Nova solicitação de Avaliação Psicológica", [
+      ["Modalidade", modalityLabel],
       ["Empresa do serviço", details.serviceCompanyLabel],
-      ["Empresa", details.companyName],
+      ["Empresa solicitante", details.companyName],
       ["Responsável", details.contactName],
       ["E-mail", details.contactEmail],
       ["Telefone", details.contactPhone || "Não informado"],
-      ["Data", formatDate(details.sessionDate)],
-      ["Horário", formatTime(details.startTime)],
+      ["Data", formatOptionalDate(details.sessionDate)],
+      ["Horário", formatOptionalTime(details.startTime)],
       ["Quantidade de candidatos", details.candidatesCount],
       ["Candidatos", formatCandidates(details.candidates)],
       ["Observações", details.notes || "Sem observações."],
       ["Link para o painel", details.adminUrl],
     ]),
-    subject: "Novo agendamento de Sala de Testes",
+    subject: "Nova solicitação de Avaliação Psicológica",
   };
 }
