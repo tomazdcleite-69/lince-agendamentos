@@ -14,6 +14,11 @@ type AdminCandidateNoShowButtonProps = {
   initialStatus: string;
 };
 
+type AdminCandidateCompletedButtonProps = {
+  candidateId: string;
+  initialStatus: string;
+};
+
 async function postJson(
   url: string,
   payload: Record<string, unknown>,
@@ -157,6 +162,55 @@ export function AdminCandidateNoShowButton({
             : isNoShow
               ? "Notificar novamente"
               : "Não compareceu"}
+      </button>
+      {message ? (
+        <span className="max-w-[180px] text-xs font-semibold text-slate-600">
+          {message}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+export function AdminCandidateCompletedButton({
+  candidateId,
+  initialStatus,
+}: AdminCandidateCompletedButtonProps) {
+  const router = useRouter();
+  const [message, setMessage] = useState("");
+  const [isCompleted, setIsCompleted] = useState(initialStatus === "realizado");
+  const [isPending, startTransition] = useTransition();
+
+  function handleMarkCompleted() {
+    setMessage("");
+
+    startTransition(async () => {
+      try {
+        await postJson("/api/admin/candidates/mark-completed", {
+          candidate_id: candidateId,
+        });
+        setIsCompleted(true);
+        setMessage("Status atualizado.");
+        router.refresh();
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível marcar como realizado.",
+        );
+      }
+    });
+  }
+
+  return (
+    <div className="grid gap-2">
+      <button
+        type="button"
+        onClick={handleMarkCompleted}
+        disabled={isPending || isCompleted}
+        className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-black uppercase tracking-wide text-white shadow-[4px_4px_0_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-400"
+      >
+        {isPending ? "Atualizando" : "Realizado"}
       </button>
       {message ? (
         <span className="max-w-[180px] text-xs font-semibold text-slate-600">

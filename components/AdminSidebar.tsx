@@ -31,18 +31,6 @@ const sidebarItems: Array<{
     label: "Lince",
   },
   {
-    company: "psicoespaco",
-    href: "/admin?empresa=psicoespaco",
-    image: {
-      alt: "Psicoespaço",
-      height: 1440,
-      src: "/psicoespaco-logo.png",
-      width: 1440,
-    },
-    imageClassName: "scale-[1.55]",
-    label: "Psicoespaço",
-  },
-  {
     company: "espaco_lince",
     href: "/admin?empresa=espaco_lince",
     image: {

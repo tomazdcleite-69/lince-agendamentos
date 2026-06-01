@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  AdminCandidateCompletedButton,
   AdminCandidateNoShowButton,
   AdminCandidateNotesForm,
 } from "@/components/AdminCandidateControls";
@@ -233,6 +234,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                               initialNotifiedAt={
                                 candidate.no_show_notified_at
                               }
+                              initialStatus={candidate.candidate_status}
+                            />
+                            <AdminCandidateCompletedButton
+                              candidateId={candidate.id}
                               initialStatus={candidate.candidate_status}
                             />
                           </div>
