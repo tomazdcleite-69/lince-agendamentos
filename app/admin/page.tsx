@@ -42,6 +42,7 @@ type AdminBookingCandidate = {
 type AdminBookingWithCandidates = {
   assessment_modality: AssessmentModality;
   booking_candidates: AdminBookingCandidate[] | null;
+  company_name: string | null;
   id: string;
   test_room_sessions: {
     session_date: string;
@@ -187,7 +188,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select(
-      "id, assessment_modality, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_name, desired_role, candidate_status, admin_notes, no_show_notified_at, created_at)",
+      "id, assessment_modality, company_name, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_name, desired_role, candidate_status, admin_notes, no_show_notified_at, created_at)",
     )
     .eq("service_company", selectedCompany)
     .order("created_at", { ascending: false });
@@ -275,11 +276,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           ) : (
             <section className="overflow-hidden rounded-[22px] border-[3px] border-black bg-white text-slate-900 shadow-[0_10px_0_rgba(0,0,0,0.22)]">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
+                <table className="w-full min-w-[1320px] border-collapse text-left text-sm">
                   <thead className="bg-[#efe4ff] text-xs uppercase tracking-wide text-[#5b2396]">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Data</th>
                       <th className="px-4 py-3 font-semibold">Horário</th>
+                      <th className="px-4 py-3 font-semibold">
+                        Empresa Solicitante
+                      </th>
                       <th className="px-4 py-3 font-semibold">
                         Nome Candidato
                       </th>
@@ -297,6 +301,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         </td>
                         <td className="px-4 py-4 text-slate-700">
                           {getCandidateTime(candidate)}
+                        </td>
+                        <td className="px-4 py-4 font-medium text-slate-900">
+                          {candidate.booking.company_name || "Não informado"}
                         </td>
                         <td className="px-4 py-4 font-medium text-slate-900">
                           {candidate.candidate_name}
