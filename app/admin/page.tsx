@@ -4,6 +4,7 @@ import {
   AdminCandidateNoShowButton,
   AdminCandidateNotesForm,
 } from "@/components/AdminCandidateControls";
+import AdminFilters from "@/components/AdminFilters";
 import AdminSidebar, {
   type AdminServiceCompany,
 } from "@/components/AdminSidebar";
@@ -21,6 +22,9 @@ export const dynamic = "force-dynamic";
 type AdminPageProps = {
   searchParams: Promise<{
     empresa?: string | string[];
+    horario?: string | string[];
+    modalidade?: string | string[];
+    status?: string | string[];
   }>;
 };
 
@@ -49,20 +53,63 @@ type AdminCandidateRow = AdminBookingCandidate & {
   booking: AdminBookingWithCandidates;
 };
 
+type AdminHourFilter = "08:30" | "13:30" | "sem_horario" | null;
+
 const ADMIN_COMPANY_LABELS: Record<AdminServiceCompany, string> = {
   espaco_lince: "Espaço Lince",
   lince: "Lince",
   psicoespaco: "Psicoespaço",
 };
 
-function normalizeAdminCompany(value: unknown): AdminServiceCompany {
+function getFirstSearchParam(value: unknown) {
   const parsed = Array.isArray(value) ? value[0] : value;
+
+  return typeof parsed === "string" ? parsed : "";
+}
+
+function normalizeAdminCompany(value: unknown): AdminServiceCompany {
+  const parsed = getFirstSearchParam(value);
 
   if (parsed === "psicoespaco" || parsed === "espaco_lince") {
     return parsed;
   }
 
   return "lince";
+}
+
+function normalizeModalityFilter(value: unknown): AssessmentModality | null {
+  const parsed = getFirstSearchParam(value);
+
+  if (parsed === "presencial" || parsed === "online") {
+    return parsed;
+  }
+
+  return null;
+}
+
+function normalizeHourFilter(value: unknown): AdminHourFilter {
+  const parsed = getFirstSearchParam(value);
+
+  if (parsed === "08:30" || parsed === "13:30" || parsed === "sem_horario") {
+    return parsed;
+  }
+
+  return null;
+}
+
+function normalizeStatusFilter(value: unknown): CandidateStatus | null {
+  const parsed = getFirstSearchParam(value);
+
+  if (
+    parsed === "confirmado" ||
+    parsed === "realizado" ||
+    parsed === "nao_compareceu" ||
+    parsed === "cancelado"
+  ) {
+    return parsed;
+  }
+
+  return null;
 }
 
 function formatDate(date: string) {
@@ -102,12 +149,40 @@ function getCandidateTime(row: AdminCandidateRow) {
     : "Não informado";
 }
 
+function getCandidateFilterHour(row: AdminCandidateRow) {
+  if (row.booking.assessment_modality === "online") {
+    return "sem_horario";
+  }
+
+  return row.booking.test_room_sessions
+    ? formatTime(row.booking.test_room_sessions.start_time)
+    : "";
+}
+
 export default async function AdminPage({ searchParams }: AdminPageProps) {
-  const { empresa } = await searchParams;
+  const { empresa, horario, modalidade, status } = await searchParams;
   const selectedCompany = normalizeAdminCompany(empresa);
   const selectedCompanyLabel = ADMIN_COMPANY_LABELS[selectedCompany];
+  const modalityFilter = normalizeModalityFilter(modalidade);
+  const hourFilter = normalizeHourFilter(horario);
+  const statusFilter = normalizeStatusFilter(status);
+  const authParams = new URLSearchParams({
+    empresa: selectedCompany,
+  });
 
-  await requireAdminUser(`/admin?empresa=${selectedCompany}`);
+  if (modalityFilter) {
+    authParams.set("modalidade", modalityFilter);
+  }
+
+  if (hourFilter) {
+    authParams.set("horario", hourFilter);
+  }
+
+  if (statusFilter) {
+    authParams.set("status", statusFilter);
+  }
+
+  await requireAdminUser(`/admin?${authParams.toString()}`);
 
   const { data, error } = await supabaseAdmin
     .from("bookings")
@@ -119,7 +194,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   const bookings =
     (data as unknown as AdminBookingWithCandidates[] | null) ?? [];
-  const candidates = bookings
+  const allCandidates = bookings
     .flatMap((booking) =>
       (booking.booking_candidates ?? []).map((candidate) => ({
         ...candidate,
@@ -127,6 +202,24 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       })),
     )
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const candidates = allCandidates.filter((candidate) => {
+    if (
+      modalityFilter &&
+      candidate.booking.assessment_modality !== modalityFilter
+    ) {
+      return false;
+    }
+
+    if (hourFilter && getCandidateFilterHour(candidate) !== hourFilter) {
+      return false;
+    }
+
+    if (statusFilter && candidate.candidate_status !== statusFilter) {
+      return false;
+    }
+
+    return true;
+  });
 
   return (
     <main className="min-h-screen bg-[#5b2396] text-white lg:grid lg:grid-cols-[255px_minmax(0,1fr)]">
@@ -147,14 +240,17 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
-              <Link
-                href="/"
-                className="inline-flex w-fit items-center justify-center whitespace-nowrap rounded-2xl bg-white px-5 py-3 text-sm font-black uppercase tracking-wide !text-black shadow-[6px_6px_0_rgba(0,0,0,0.32)] transition hover:-translate-y-0.5 hover:bg-[#efe4ff]"
-              >
-                Voltar à página
-              </Link>
-              <LogoutButton />
+            <div className="grid gap-4 sm:justify-items-end">
+              <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
+                <Link
+                  href="/"
+                  className="inline-flex w-fit items-center justify-center whitespace-nowrap rounded-2xl bg-white px-5 py-3 text-sm font-black uppercase tracking-wide !text-black shadow-[6px_6px_0_rgba(0,0,0,0.32)] transition hover:-translate-y-0.5 hover:bg-[#efe4ff]"
+                >
+                  Voltar à página
+                </Link>
+                <LogoutButton />
+              </div>
+              <AdminFilters />
             </div>
           </header>
 
