@@ -1,5 +1,11 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+
+const EXIT_ANIMATION_DURATION = 450;
 
 type CompanyCard = {
   href?: string;
@@ -38,6 +44,48 @@ function ServiceCardContent({ card }: { card: CompanyCard }) {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const [isExiting, setIsExiting] = useState(false);
+  const navigationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const destination = companyCards.find((card) => card.href)?.href;
+
+    if (destination) {
+      router.prefetch(destination);
+    }
+
+    return () => {
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+    };
+  }, [router]);
+
+  function startExitAnimation(destination?: string) {
+    if (!destination || isExiting) {
+      return;
+    }
+
+    setIsExiting(true);
+
+    navigationTimeoutRef.current = setTimeout(() => {
+      try {
+        router.push(destination);
+
+        window.setTimeout(() => {
+          if (window.location.pathname === "/") {
+            window.location.assign(destination);
+          }
+        }, 1200);
+      } catch {
+        window.location.assign(destination);
+      }
+    }, EXIT_ANIMATION_DURATION);
+  }
+
   return (
     <main
       className="relative min-h-screen overflow-x-hidden bg-[#251038] bg-cover bg-center bg-no-repeat text-white"
@@ -48,7 +96,14 @@ export default function Home() {
         aria-hidden="true"
       />
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col items-center justify-center px-4 py-8 sm:px-8 lg:py-10">
+      <div
+        className={`relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col items-center justify-center px-4 py-8 transition-[opacity,transform] duration-[450ms] ease-[cubic-bezier(0.4,0,0.2,1)] will-change-transform motion-reduce:transition-none sm:px-8 lg:py-10 ${
+          isExiting
+            ? "pointer-events-none -translate-x-20 opacity-0"
+            : "translate-x-0 opacity-100"
+        }`}
+        aria-busy={isExiting}
+      >
         <div className="flex h-[64px] w-[212px] items-center justify-center overflow-hidden rounded-full bg-[#8b2be8]/90 px-5 shadow-[0_10px_28px_rgba(20,4,38,0.32),inset_0_-8px_16px_rgba(0,0,0,0.08)] ring-1 ring-white/20 backdrop-blur-sm sm:h-[78px] sm:w-[260px] sm:px-7">
           <Image
             src="/lince-logo-white.png"
@@ -77,6 +132,17 @@ export default function Home() {
               <Link
                 key={card.title}
                 href={card.href}
+                onNavigate={(event) => {
+                  if (
+                    window.matchMedia("(prefers-reduced-motion: reduce)")
+                      .matches
+                  ) {
+                    return;
+                  }
+
+                  event.preventDefault();
+                  startExitAnimation(card.href);
+                }}
                 className="group flex min-h-[150px] flex-col items-center justify-center gap-3 rounded-[38px] bg-white/95 p-6 shadow-[0_10px_0_rgba(20,4,38,0.4),0_16px_38px_rgba(20,4,38,0.28)] ring-1 ring-white/50 backdrop-blur-sm transition hover:-translate-y-1 hover:bg-white hover:shadow-[0_14px_0_rgba(20,4,38,0.4),0_20px_44px_rgba(20,4,38,0.3)] focus:outline-none focus:ring-4 focus:ring-white/50 sm:min-h-[176px] sm:rounded-[46px]"
                 aria-label={card.title}
               >
