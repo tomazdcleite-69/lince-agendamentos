@@ -103,12 +103,12 @@ export default async function AdminBookingPage({
     <main className="min-h-screen bg-[#5b2396] px-4 py-6 text-white sm:px-8 lg:px-10">
       <div className="mx-auto grid max-w-5xl gap-6">
         <header className="grid gap-5 lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)_auto] lg:items-center">
-          <div className="flex h-[84px] w-[240px] items-center justify-center overflow-hidden rounded-full bg-[#8b2be8] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.08)] sm:h-[104px] sm:w-[300px]">
+          <div className="flex h-[84px] w-[240px] items-center justify-center overflow-hidden rounded-full bg-[#8b2be8] px-5 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.08)] sm:h-[104px] sm:w-[300px] sm:px-7">
             <Image
-              src="/lince-logo.png"
+              src="/lince-logo-white.png"
               alt="Lince"
-              width={313}
-              height={109}
+              width={2200}
+              height={398}
               priority
               unoptimized
               className="h-full w-full object-contain"

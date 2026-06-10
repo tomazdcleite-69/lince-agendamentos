@@ -18,12 +18,12 @@ export default function PsychologicalAssessmentPage() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#5b2396] px-4 py-8 text-white sm:px-8">
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col items-center justify-center text-center">
-        <div className="flex h-[72px] w-[232px] items-center justify-center overflow-hidden rounded-full bg-[#8b2be8] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.08)] sm:h-[86px] sm:w-[284px]">
+        <div className="flex h-[72px] w-[232px] items-center justify-center overflow-hidden rounded-full bg-[#8b2be8] px-5 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.08)] sm:h-[86px] sm:w-[284px] sm:px-7">
           <Image
-            src="/lince-logo.png"
+            src="/lince-logo-white.png"
             alt="Lince"
-            width={313}
-            height={109}
+            width={2200}
+            height={398}
             priority
             unoptimized
             className="h-full w-full object-contain"

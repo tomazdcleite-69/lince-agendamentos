@@ -45,7 +45,7 @@ export default async function SalaTestesPage({
   const serviceCompanyLogoSize =
     serviceCompany === "psicoespaco"
       ? { height: 1440, width: 1440 }
-      : { height: 109, width: 313 };
+      : { height: 398, width: 2200 };
   const today = getTodayInSaoPauloDateKey();
   const { endDate, startDate } = getScheduleGridRange(today);
 
@@ -70,7 +70,11 @@ export default async function SalaTestesPage({
     <main className="min-h-screen overflow-x-hidden bg-[#5b2396] px-4 py-5 text-white sm:px-7 lg:px-8">
       <div className="mx-auto grid w-full max-w-[1700px] gap-8">
         <header className="grid gap-5 lg:grid-cols-[minmax(250px,313px)_minmax(0,1fr)_auto] lg:items-center">
-          <div className="flex h-[91px] w-[260px] items-center justify-center overflow-hidden rounded-full bg-[#8b2be8] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.08)] sm:h-[109px] sm:w-[313px]">
+          <div
+            className={`flex h-[91px] w-[260px] items-center justify-center overflow-hidden rounded-full bg-[#8b2be8] shadow-[inset_0_-8px_16px_rgba(0,0,0,0.08)] sm:h-[109px] sm:w-[313px] ${
+              serviceCompany === "lince" ? "px-5 sm:px-7" : ""
+            }`}
+          >
             <Image
               src={serviceCompanyLogo}
               alt={serviceCompanyName}

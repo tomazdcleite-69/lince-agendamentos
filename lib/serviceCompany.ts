@@ -35,5 +35,5 @@ export function getServiceCompanyPortalName(value: ServiceCompany) {
 export function getServiceCompanyLogo(value: ServiceCompany) {
   return value === "psicoespaco"
     ? "/psicoespaco-logo.png"
-    : "/lince-logo.png";
+    : "/lince-logo-white.png";
 }

@@ -52,10 +52,10 @@ export default function AdminSidebar({ activeCompany }: AdminSidebarProps) {
         <div className="flex justify-center border-b-2 border-black pb-7 lg:-mx-5 lg:px-5">
           <div className="flex h-[72px] w-[220px] items-center justify-center overflow-hidden rounded-full bg-[#8b2be8] px-6 shadow-[inset_0_-8px_16px_rgba(0,0,0,0.08)]">
             <Image
-              src="/lince-logo.png"
+              src="/lince-logo-white.png"
               alt="Lince"
-              width={313}
-              height={109}
+              width={2200}
+              height={398}
               priority
               unoptimized
               className="h-full w-full object-contain"
