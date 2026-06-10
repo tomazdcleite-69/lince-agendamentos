@@ -5,12 +5,12 @@ export default function EspacoLincePage() {
   return (
     <main className="min-h-screen bg-[#5b2396] px-4 py-8 text-white sm:px-8">
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl flex-col items-center justify-center text-center">
-        <div className="flex h-[150px] w-[180px] items-center justify-center overflow-hidden rounded-[46px] bg-white p-5 shadow-[0_12px_0_rgba(0,0,0,0.22)]">
+        <div className="flex h-[112px] w-full max-w-[460px] items-center justify-center overflow-hidden rounded-[36px] bg-[#8b2be8] px-6 py-4 shadow-[0_12px_0_rgba(0,0,0,0.22)] sm:h-[138px] sm:px-8">
           <Image
             src="/espaco-lince-logo.png"
             alt="Espaço Lince"
-            width={271}
-            height={252}
+            width={2935}
+            height={793}
             priority
             unoptimized
             className="h-full w-full object-contain"

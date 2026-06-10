@@ -16,8 +16,10 @@ const sidebarItems: Array<{
     src: string;
     width: number;
   };
+  imageContainerClassName?: string;
   imageClassName?: string;
   label: string;
+  linkClassName?: string;
 }> = [
   {
     company: "lince",
@@ -35,11 +37,13 @@ const sidebarItems: Array<{
     href: "/admin?empresa=espaco_lince",
     image: {
       alt: "Espaço Lince",
-      height: 252,
+      height: 793,
       src: "/espaco-lince-logo.png",
-      width: 271,
+      width: 2935,
     },
+    imageContainerClassName: "h-10 w-24",
     label: "Espaço Lince",
+    linkClassName: "grid-cols-[96px_1fr] px-3",
   },
 ];
 
@@ -72,13 +76,19 @@ export default function AdminSidebar({ activeCompany }: AdminSidebarProps) {
                 key={item.company}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`grid min-h-[60px] grid-cols-[54px_1fr] items-center gap-3 rounded-full bg-[#8b2be8] px-4 py-2 text-lg font-semibold text-white shadow-[6px_6px_0_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 hover:bg-[#9d3cff] ${
+                className={`grid min-h-[60px] items-center gap-3 rounded-full bg-[#8b2be8] py-2 text-lg font-semibold text-white shadow-[6px_6px_0_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 hover:bg-[#9d3cff] ${
+                  item.linkClassName ?? "grid-cols-[54px_1fr] px-4"
+                } ${
                   isActive
                     ? "ring-4 ring-[#5b2396]/25"
                     : ""
                 }`}
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full">
+                <span
+                  className={`flex items-center justify-center ${
+                    item.imageContainerClassName ?? "h-12 w-12 rounded-full"
+                  }`}
+                >
                   <Image
                     src={item.image.src}
                     alt={item.image.alt}
