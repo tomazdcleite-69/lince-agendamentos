@@ -93,13 +93,16 @@ export type Booking = {
 export type BookingCandidate = {
   id: string;
   booking_id: string;
+  candidate_session_id: string | null;
   candidate_name: string;
   desired_role: string;
   candidate_phone: string | null;
   candidate_email: string | null;
   candidate_status: CandidateStatus;
   admin_notes: string | null;
+  cancelled_at: string | null;
   no_show_notified_at: string | null;
+  rescheduled_at: string | null;
   resume_url: string | null;
   created_at: string;
 };
@@ -165,13 +168,16 @@ export type Database = {
         {
           id?: string;
           booking_id: string;
+          candidate_session_id?: string | null;
           candidate_name: string;
           desired_role: string;
           candidate_phone?: string | null;
           candidate_email?: string | null;
           candidate_status?: CandidateStatus;
           admin_notes?: string | null;
+          cancelled_at?: string | null;
           no_show_notified_at?: string | null;
+          rescheduled_at?: string | null;
           resume_url?: string | null;
           created_at?: string;
         },

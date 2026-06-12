@@ -1,5 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
+import StatusCandidateActions from "@/components/StatusCandidateActions";
+import {
+  getScheduleGridRange,
+  getTodayInSaoPauloDateKey,
+} from "@/lib/scheduleGrid";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
   ASSESSMENT_MODALITY_LABELS,
@@ -7,6 +12,8 @@ import {
   CANDIDATE_STATUS_LABELS,
   type BookingStatus,
   type BookingWithSession,
+  type TestRoomSession,
+  type TestRoomSessionWithAvailability,
 } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +47,7 @@ export default async function StatusPage({ params }: StatusPageProps) {
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select(
-      "id, session_id, assessment_modality, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, status, public_token, created_at, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_name, desired_role, candidate_status, created_at)",
+      "id, session_id, assessment_modality, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, status, public_token, created_at, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_session_id, candidate_name, desired_role, candidate_status, cancelled_at, rescheduled_at, created_at)",
     )
     .eq("public_token", token)
     .maybeSingle();
@@ -50,6 +57,64 @@ export default async function StatusPage({ params }: StatusPageProps) {
     a.created_at.localeCompare(b.created_at),
   );
   const isOnline = booking?.assessment_modality === "online";
+  const sessionIds = booking
+    ? [
+        ...new Set(
+          candidates
+            .map(
+              (candidate) => candidate.candidate_session_id ?? booking.session_id,
+            )
+            .filter((sessionId): sessionId is string => Boolean(sessionId)),
+        ),
+      ]
+    : [];
+  let candidateSessions: Pick<
+    TestRoomSession,
+    "id" | "session_date" | "start_time"
+  >[] = [];
+  let availableSessions: TestRoomSessionWithAvailability[] = [];
+
+  if (sessionIds.length > 0) {
+    const { data: sessionData } = await supabaseAdmin
+      .from("test_room_sessions")
+      .select("id, session_date, start_time")
+      .in("id", sessionIds);
+
+    candidateSessions = sessionData ?? [];
+  }
+
+  if (
+    booking?.assessment_modality === "presencial" &&
+    candidates.some((candidate) => candidate.candidate_status === "confirmado")
+  ) {
+    const today = getTodayInSaoPauloDateKey();
+    const { endDate } = getScheduleGridRange(today);
+    const { data: sessionData } = await supabaseAdmin
+      .from("test_room_sessions_with_availability")
+      .select(
+        "id, session_date, start_time, capacity, status, occupied_spots, available_spots",
+      )
+      .gte("session_date", today)
+      .lte("session_date", endDate)
+      .eq("status", "aberta")
+      .gt("available_spots", 0)
+      .order("session_date", { ascending: true })
+      .order("start_time", { ascending: true });
+
+    availableSessions = (sessionData ?? []).map((session) => ({
+      ...session,
+      available_spots: Number(session.available_spots),
+      capacity: Number(session.capacity),
+      occupied_spots: Number(session.occupied_spots),
+    }));
+  }
+
+  const candidateSessionById = new Map(
+    candidateSessions.map((session) => [session.id, session]),
+  );
+  const bookingAllowsCandidateActions =
+    booking &&
+    !["cancelado", "realizado", "nao_compareceu"].includes(booking.status);
 
   if (error || !booking) {
     return (
@@ -184,39 +249,97 @@ export default async function StatusPage({ params }: StatusPageProps) {
                     {candidates.map((candidate, index) => (
                       <li
                         key={candidate.id}
-                        className="grid gap-3 px-4 py-4 sm:grid-cols-[44px_1fr_1fr_1fr] sm:items-center"
+                        className="px-4 py-4"
                       >
-                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#efe4ff] text-sm font-black text-[#5b2396]">
-                          {index + 1}
-                        </span>
-                        <span>
-                          <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Nome
+                        <div className="grid gap-3 lg:grid-cols-[44px_1.2fr_1fr_1fr_0.8fr_0.9fr] lg:items-center">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#efe4ff] text-sm font-black text-[#5b2396]">
+                            {index + 1}
                           </span>
-                          <span className="font-black text-[#1f1230]">
-                            {candidate.candidate_name}
+                          <span>
+                            <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Nome
+                            </span>
+                            <span className="font-black text-[#1f1230]">
+                              {candidate.candidate_name}
+                            </span>
                           </span>
-                        </span>
-                        <span>
-                          <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Cargo
+                          <span>
+                            <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Cargo
+                            </span>
+                            <span className="font-black text-[#1f1230]">
+                              {candidate.desired_role}
+                            </span>
                           </span>
-                          <span className="font-black text-[#1f1230]">
-                            {candidate.desired_role}
+                          <span>
+                            <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Data
+                            </span>
+                            <span className="font-black capitalize text-[#1f1230]">
+                              {(() => {
+                                const sessionId =
+                                  candidate.candidate_session_id ??
+                                  booking.session_id;
+                                const session = sessionId
+                                  ? candidateSessionById.get(sessionId)
+                                  : null;
+
+                                return session
+                                  ? formatDate(session.session_date)
+                                  : isOnline
+                                    ? "Avaliação online"
+                                    : "Não informada";
+                              })()}
+                            </span>
                           </span>
-                        </span>
-                        <span>
-                          <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Status
+                          <span>
+                            <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Horário
+                            </span>
+                            <span className="font-black text-[#1f1230]">
+                              {(() => {
+                                const sessionId =
+                                  candidate.candidate_session_id ??
+                                  booking.session_id;
+                                const session = sessionId
+                                  ? candidateSessionById.get(sessionId)
+                                  : null;
+
+                                return session
+                                  ? formatTime(session.start_time)
+                                  : isOnline
+                                    ? "Não se aplica"
+                                    : "Não informado";
+                              })()}
+                            </span>
                           </span>
-                          <span className="font-black text-[#1f1230]">
-                            {
-                              CANDIDATE_STATUS_LABELS[
-                                candidate.candidate_status
-                              ]
+                          <span>
+                            <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Status
+                            </span>
+                            <span className="font-black text-[#1f1230]">
+                              {
+                                CANDIDATE_STATUS_LABELS[
+                                  candidate.candidate_status
+                                ]
+                              }
+                            </span>
+                          </span>
+                        </div>
+
+                        {bookingAllowsCandidateActions &&
+                        candidate.candidate_status === "confirmado" ? (
+                          <StatusCandidateActions
+                            assessmentModality={booking.assessment_modality}
+                            candidateId={candidate.id}
+                            currentSessionId={
+                              candidate.candidate_session_id ??
+                              booking.session_id
                             }
-                          </span>
-                        </span>
+                            sessions={availableSessions}
+                            token={token}
+                          />
+                        ) : null}
                       </li>
                     ))}
                   </ul>
