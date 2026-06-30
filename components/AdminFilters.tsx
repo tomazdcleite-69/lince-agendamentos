@@ -56,16 +56,38 @@ function FilterSelect({
   );
 }
 
+function FilterDateInput({
+  value,
+  onChange,
+}: {
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  return (
+    <label className="grid gap-1 text-sm font-semibold text-slate-700">
+      <span>Data</span>
+      <input
+        type="date"
+        name="data"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-[#8b2be8] focus:ring-2 focus:ring-[#8b2be8]/20"
+      />
+    </label>
+  );
+}
+
 export default function AdminFilters() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
 
+  const date = searchParams.get("data") ?? "";
   const modality = searchParams.get("modalidade") ?? "";
   const hour = searchParams.get("horario") ?? "";
   const status = searchParams.get("status") ?? "";
-  const activeFilters = [modality, hour, status].filter(Boolean).length;
+  const activeFilters = [date, modality, hour, status].filter(Boolean).length;
 
   function updateFilter(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -82,6 +104,7 @@ export default function AdminFilters() {
 
   function clearFilters() {
     const params = new URLSearchParams(searchParams.toString());
+    params.delete("data");
     params.delete("modalidade");
     params.delete("horario");
     params.delete("status");
@@ -110,6 +133,10 @@ export default function AdminFilters() {
       {isOpen ? (
         <div className="absolute left-0 right-0 top-full z-20 mt-3 rounded-[22px] border-2 border-black bg-white p-4 text-slate-900 shadow-[8px_8px_0_rgba(0,0,0,0.28)] sm:left-auto sm:w-[340px]">
           <div className="grid gap-4">
+            <FilterDateInput
+              value={date}
+              onChange={(value) => updateFilter("data", value)}
+            />
             <FilterSelect
               label="Modalidade"
               name="modalidade"

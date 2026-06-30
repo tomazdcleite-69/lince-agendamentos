@@ -15,12 +15,14 @@ import {
   CANDIDATE_STATUS_LABELS,
   type AssessmentModality,
   type CandidateStatus,
+  type TestRoomSession,
 } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 type AdminPageProps = {
   searchParams: Promise<{
+    data?: string | string[];
     empresa?: string | string[];
     horario?: string | string[];
     modalidade?: string | string[];
@@ -31,6 +33,7 @@ type AdminPageProps = {
 type AdminBookingCandidate = {
   admin_notes: string | null;
   booking_id: string;
+  candidate_session_id: string | null;
   candidate_name: string;
   candidate_status: CandidateStatus;
   created_at: string;
@@ -44,6 +47,8 @@ type AdminBookingWithCandidates = {
   booking_candidates: AdminBookingCandidate[] | null;
   company_name: string | null;
   id: string;
+  notes: string | null;
+  session_id: string | null;
   test_room_sessions: {
     session_date: string;
     start_time: string;
@@ -55,6 +60,10 @@ type AdminCandidateRow = AdminBookingCandidate & {
 };
 
 type AdminHourFilter = "08:30" | "13:30" | "sem_horario" | null;
+type AdminSessionMap = Map<
+  string,
+  Pick<TestRoomSession, "id" | "session_date" | "start_time">
+>;
 
 const ADMIN_COMPANY_LABELS: Record<AdminServiceCompany, string> = {
   espaco_lince: "Espaço Lince",
@@ -113,6 +122,12 @@ function normalizeStatusFilter(value: unknown): CandidateStatus | null {
   return null;
 }
 
+function normalizeDateFilter(value: unknown) {
+  const parsed = getFirstSearchParam(value);
+
+  return /^\d{4}-\d{2}-\d{2}$/.test(parsed) ? parsed : "";
+}
+
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -130,7 +145,7 @@ function getCandidateStatusLabel(status: CandidateStatus) {
   return CANDIDATE_STATUS_LABELS[status] ?? status;
 }
 
-function getCandidateDate(row: AdminCandidateRow) {
+function getLegacyCandidateDate(row: AdminCandidateRow) {
   if (row.booking.assessment_modality === "online") {
     return "Online";
   }
@@ -140,7 +155,7 @@ function getCandidateDate(row: AdminCandidateRow) {
     : "Não informada";
 }
 
-function getCandidateTime(row: AdminCandidateRow) {
+function getLegacyCandidateTime(row: AdminCandidateRow) {
   if (row.booking.assessment_modality === "online") {
     return "Sem horário";
   }
@@ -150,7 +165,7 @@ function getCandidateTime(row: AdminCandidateRow) {
     : "Não informado";
 }
 
-function getCandidateFilterHour(row: AdminCandidateRow) {
+function getLegacyCandidateFilterHour(row: AdminCandidateRow) {
   if (row.booking.assessment_modality === "online") {
     return "sem_horario";
   }
@@ -160,10 +175,78 @@ function getCandidateFilterHour(row: AdminCandidateRow) {
     : "";
 }
 
+function getEffectiveSession(row: AdminCandidateRow, sessions: AdminSessionMap) {
+  const sessionId = row.candidate_session_id ?? row.booking.session_id;
+
+  if (sessionId && sessions.has(sessionId)) {
+    return sessions.get(sessionId) ?? null;
+  }
+
+  return row.booking.test_room_sessions;
+}
+
+function getCandidateDateWithSession(
+  row: AdminCandidateRow,
+  sessions: AdminSessionMap,
+) {
+  if (row.booking.assessment_modality === "online") {
+    return getLegacyCandidateDate(row);
+  }
+
+  const session = getEffectiveSession(row, sessions);
+
+  return session
+    ? formatDate(session.session_date)
+    : getLegacyCandidateDate(row);
+}
+
+function getCandidateTimeWithSession(
+  row: AdminCandidateRow,
+  sessions: AdminSessionMap,
+) {
+  if (row.booking.assessment_modality === "online") {
+    return getLegacyCandidateTime(row);
+  }
+
+  const session = getEffectiveSession(row, sessions);
+
+  return session ? formatTime(session.start_time) : getLegacyCandidateTime(row);
+}
+
+function getCandidateFilterHourWithSession(
+  row: AdminCandidateRow,
+  sessions: AdminSessionMap,
+) {
+  if (row.booking.assessment_modality === "online") {
+    return getLegacyCandidateFilterHour(row);
+  }
+
+  const session = getEffectiveSession(row, sessions);
+
+  return session
+    ? formatTime(session.start_time)
+    : getLegacyCandidateFilterHour(row);
+}
+
+function getCandidateFilterDateWithSession(
+  row: AdminCandidateRow,
+  sessions: AdminSessionMap,
+) {
+  if (row.booking.assessment_modality === "online") {
+    return "";
+  }
+
+  const session = getEffectiveSession(row, sessions);
+
+  return session?.session_date ?? "";
+}
+
 export default async function AdminPage({ searchParams }: AdminPageProps) {
-  const { empresa, horario, modalidade, status } = await searchParams;
+  const { data: dateParam, empresa, horario, modalidade, status } =
+    await searchParams;
   const selectedCompany = normalizeAdminCompany(empresa);
   const selectedCompanyLabel = ADMIN_COMPANY_LABELS[selectedCompany];
+  const dateFilter = normalizeDateFilter(dateParam);
   const modalityFilter = normalizeModalityFilter(modalidade);
   const hourFilter = normalizeHourFilter(horario);
   const statusFilter = normalizeStatusFilter(status);
@@ -173,6 +256,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   if (modalityFilter) {
     authParams.set("modalidade", modalityFilter);
+  }
+
+  if (dateFilter) {
+    authParams.set("data", dateFilter);
   }
 
   if (hourFilter) {
@@ -188,7 +275,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select(
-      "id, assessment_modality, company_name, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_name, desired_role, candidate_status, admin_notes, no_show_notified_at, created_at)",
+      "id, session_id, assessment_modality, company_name, notes, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_session_id, candidate_name, desired_role, candidate_status, admin_notes, no_show_notified_at, created_at)",
     )
     .eq("service_company", selectedCompany)
     .order("created_at", { ascending: false });
@@ -203,6 +290,33 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       })),
     )
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const sessionIds = [
+    ...new Set(
+      allCandidates
+        .map(
+          (candidate) =>
+            candidate.candidate_session_id ?? candidate.booking.session_id,
+        )
+        .filter((sessionId): sessionId is string => Boolean(sessionId)),
+    ),
+  ];
+  let candidateSessions: Pick<
+    TestRoomSession,
+    "id" | "session_date" | "start_time"
+  >[] = [];
+
+  if (sessionIds.length > 0) {
+    const { data: sessionData } = await supabaseAdmin
+      .from("test_room_sessions")
+      .select("id, session_date, start_time")
+      .in("id", sessionIds);
+
+    candidateSessions = sessionData ?? [];
+  }
+
+  const candidateSessionById = new Map(
+    candidateSessions.map((session) => [session.id, session]),
+  );
   const candidates = allCandidates.filter((candidate) => {
     if (
       modalityFilter &&
@@ -211,7 +325,19 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       return false;
     }
 
-    if (hourFilter && getCandidateFilterHour(candidate) !== hourFilter) {
+    if (
+      dateFilter &&
+      getCandidateFilterDateWithSession(candidate, candidateSessionById) !==
+        dateFilter
+    ) {
+      return false;
+    }
+
+    if (
+      hourFilter &&
+      getCandidateFilterHourWithSession(candidate, candidateSessionById) !==
+        hourFilter
+    ) {
       return false;
     }
 
@@ -226,8 +352,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     <main className="min-h-screen bg-[#5b2396] text-white lg:grid lg:grid-cols-[255px_minmax(0,1fr)]">
       <AdminSidebar activeCompany={selectedCompany} />
 
-      <section className="px-4 py-8 sm:px-8 lg:px-12">
-        <div className="mx-auto max-w-7xl">
+      <section className="px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
+        <div className="w-full max-w-none">
           <header className="mb-10 grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
             <div className="text-center lg:text-left">
               <h1 className="text-4xl font-black uppercase leading-none tracking-wide text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.25)]">
@@ -276,7 +402,18 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           ) : (
             <section className="overflow-hidden rounded-[22px] border-[3px] border-black bg-white text-slate-900 shadow-[0_10px_0_rgba(0,0,0,0.22)]">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1320px] border-collapse text-left text-sm">
+                <table className="w-full min-w-[1540px] border-collapse text-left text-sm">
+                  <colgroup>
+                    <col className="w-[105px]" />
+                    <col className="w-[90px]" />
+                    <col className="w-[180px]" />
+                    <col className="w-[190px]" />
+                    <col className="w-[170px]" />
+                    <col className="w-[220px]" />
+                    <col className="w-[250px]" />
+                    <col className="w-[125px]" />
+                    <col className="w-[210px]" />
+                  </colgroup>
                   <thead className="bg-[#efe4ff] text-xs uppercase tracking-wide text-[#5b2396]">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Data</th>
@@ -288,7 +425,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         Nome Candidato
                       </th>
                       <th className="px-4 py-3 font-semibold">Cargo</th>
-                      <th className="px-4 py-3 font-semibold">Observações</th>
+                      <th className="px-4 py-3 font-semibold">
+                        Observação da empresa
+                      </th>
+                      <th className="px-4 py-3 font-semibold">
+                        Observação interna
+                      </th>
                       <th className="px-4 py-3 font-semibold">Status</th>
                       <th className="px-4 py-3 font-semibold">Ação</th>
                     </tr>
@@ -297,10 +439,16 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     {candidates.map((candidate) => (
                       <tr key={candidate.id} className="align-top">
                         <td className="px-4 py-4 text-slate-700">
-                          {getCandidateDate(candidate)}
+                          {getCandidateDateWithSession(
+                            candidate,
+                            candidateSessionById,
+                          )}
                         </td>
                         <td className="px-4 py-4 text-slate-700">
-                          {getCandidateTime(candidate)}
+                          {getCandidateTimeWithSession(
+                            candidate,
+                            candidateSessionById,
+                          )}
                         </td>
                         <td className="px-4 py-4 font-medium text-slate-900">
                           {candidate.booking.company_name || "Não informado"}
@@ -310,6 +458,17 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         </td>
                         <td className="px-4 py-4 text-slate-700">
                           {candidate.desired_role}
+                        </td>
+                        <td className="px-4 py-4 text-slate-700">
+                          <p
+                            title={
+                              candidate.booking.notes?.trim() || undefined
+                            }
+                            className="line-clamp-2 max-w-[220px] leading-relaxed"
+                          >
+                            {candidate.booking.notes?.trim() ||
+                              "Sem observação"}
+                          </p>
                         </td>
                         <td className="px-4 py-4">
                           <AdminCandidateNotesForm
