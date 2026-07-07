@@ -300,6 +300,8 @@ export async function POST(request: Request) {
     .insert(
       candidates.map((candidate) => ({
         booking_id: booking.id,
+        candidate_session_id:
+          assessmentModality === "presencial" ? sessionId : null,
         candidate_name: candidate.candidate_name,
         candidate_email: candidate.candidate_email,
         candidate_phone: candidate.candidate_phone,
