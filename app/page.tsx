@@ -19,19 +19,14 @@ const companyCards: CompanyCard[] = [
     title: "Avaliação Psicológica",
   },
   {
-    subtitle: "(Espaço Órion)",
-    title: "Salas de Reunião",
-  },
-  {
-    subtitle: "(Espaço Constelação)",
-    title: "Auditório",
+    title: "Salas de Reunião / Eventos",
   },
 ];
 
 function ServiceCardContent({ card }: { card: CompanyCard }) {
   return (
     <>
-      <span className="text-center text-[clamp(1.55rem,2.1vw,2.35rem)] font-black leading-tight text-[#5b2396]">
+      <span className="text-center text-[clamp(2rem,2.9vw,3.25rem)] font-black leading-tight text-[#5b2396]">
         {card.title}
       </span>
       {card.subtitle ? (
@@ -126,7 +121,7 @@ export default function Home() {
           Selecione a opção desejada:
         </p>
 
-        <section className="mt-6 grid w-full max-w-5xl gap-6 sm:grid-cols-3">
+        <section className="mt-8 grid w-full max-w-5xl justify-center gap-8 sm:grid-cols-2 lg:gap-10">
           {companyCards.map((card) =>
             card.href ? (
               <Link
@@ -143,7 +138,7 @@ export default function Home() {
                   event.preventDefault();
                   startExitAnimation(card.href);
                 }}
-                className="group flex min-h-[150px] flex-col items-center justify-center gap-3 rounded-[38px] bg-white/95 p-6 shadow-[0_10px_0_rgba(20,4,38,0.4),0_16px_38px_rgba(20,4,38,0.28)] ring-1 ring-white/50 backdrop-blur-sm transition hover:-translate-y-1 hover:bg-white hover:shadow-[0_14px_0_rgba(20,4,38,0.4),0_20px_44px_rgba(20,4,38,0.3)] focus:outline-none focus:ring-4 focus:ring-white/50 sm:min-h-[176px] sm:rounded-[46px]"
+                className="group flex min-h-[210px] w-full flex-col items-center justify-center gap-4 rounded-[52px] bg-white/95 px-8 py-10 shadow-[0_10px_0_rgba(20,4,38,0.4),0_16px_38px_rgba(20,4,38,0.28)] ring-1 ring-white/50 backdrop-blur-sm transition hover:-translate-y-1 hover:bg-white hover:shadow-[0_14px_0_rgba(20,4,38,0.4),0_20px_44px_rgba(20,4,38,0.3)] focus:outline-none focus:ring-4 focus:ring-white/50 sm:min-h-[264px] sm:rounded-[62px] sm:px-10 sm:py-12"
                 aria-label={card.title}
               >
                 <ServiceCardContent card={card} />
@@ -153,7 +148,7 @@ export default function Home() {
                 key={card.title}
                 type="button"
                 disabled
-                className="flex min-h-[150px] cursor-default flex-col items-center justify-center gap-3 rounded-[38px] bg-white/95 p-6 shadow-[0_10px_0_rgba(20,4,38,0.4),0_16px_38px_rgba(20,4,38,0.28)] ring-1 ring-white/50 backdrop-blur-sm sm:min-h-[176px] sm:rounded-[46px]"
+                className="flex min-h-[210px] w-full cursor-default flex-col items-center justify-center gap-4 rounded-[52px] bg-white/95 px-8 py-10 shadow-[0_10px_0_rgba(20,4,38,0.4),0_16px_38px_rgba(20,4,38,0.28)] ring-1 ring-white/50 backdrop-blur-sm sm:min-h-[264px] sm:rounded-[62px] sm:px-10 sm:py-12"
               >
                 <ServiceCardContent card={card} />
               </button>
