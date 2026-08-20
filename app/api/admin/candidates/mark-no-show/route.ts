@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { buildCandidateNoShowEmail } from "@/lib/emailTemplates";
 import { getEmailConfig, getResendClient } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase";
-import type { AssessmentModality } from "@/types";
+import type { AssessmentModality, CandidateStatus } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -22,6 +22,7 @@ type NoShowBooking = {
 
 type NoShowCandidate = {
   bookings: NoShowBooking | NoShowBooking[] | null;
+  candidate_status: CandidateStatus;
   candidate_name: string;
   id: string;
   desired_role: string;
@@ -109,7 +110,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabaseAdmin
     .from("booking_candidates")
     .select(
-      "id, candidate_name, desired_role, no_show_notified_at, bookings(id, company_name, contact_email, assessment_modality, test_room_sessions(session_date, start_time))",
+      "id, candidate_status, candidate_name, desired_role, no_show_notified_at, bookings(id, company_name, contact_email, assessment_modality, test_room_sessions(session_date, start_time))",
     )
     .eq("id", candidateId)
     .maybeSingle();
@@ -124,6 +125,13 @@ export async function POST(request: Request) {
 
   if (!booking) {
     return errorResponse("Agendamento vinculado não encontrado.", 404);
+  }
+
+  if (candidate.candidate_status !== "confirmado") {
+    return errorResponse(
+      "Apenas candidatos confirmados podem ser marcados como ausentes.",
+      409,
+    );
   }
 
   const { error: statusError } = await supabaseAdmin

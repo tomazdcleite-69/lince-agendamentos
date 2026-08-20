@@ -35,6 +35,23 @@ export async function POST(request: Request) {
     return errorResponse("Informe o candidato.");
   }
 
+  const { data: candidate, error: candidateError } = await supabaseAdmin
+    .from("booking_candidates")
+    .select("id, candidate_status")
+    .eq("id", candidateId)
+    .maybeSingle();
+
+  if (candidateError || !candidate) {
+    return errorResponse("Candidato não encontrado.", 404);
+  }
+
+  if (candidate.candidate_status !== "confirmado") {
+    return errorResponse(
+      "Apenas candidatos confirmados podem ser marcados como realizados.",
+      409,
+    );
+  }
+
   const { error } = await supabaseAdmin
     .from("booking_candidates")
     .update({

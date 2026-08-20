@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  AdminBookingDeleteButton,
   AdminCandidateCompletedButton,
   AdminCandidateNoShowButton,
   AdminCandidateNotesForm,
@@ -484,24 +485,42 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <div className="grid gap-3">
-                            <Link
-                              href={`/admin/agendamentos/${candidate.booking.id}`}
-                              className="w-fit font-black text-[#5b2396] underline-offset-4 hover:underline"
-                            >
-                              Ver
-                            </Link>
-                            <AdminCandidateNoShowButton
-                              candidateId={candidate.id}
-                              initialNotifiedAt={
-                                candidate.no_show_notified_at
-                              }
-                              initialStatus={candidate.candidate_status}
-                            />
-                            <AdminCandidateCompletedButton
-                              candidateId={candidate.id}
-                              initialStatus={candidate.candidate_status}
-                            />
+                          <div className="grid min-w-[190px] gap-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <Link
+                                href={`/admin/agendamentos/${candidate.booking.id}`}
+                                className="font-black text-[#5b2396] underline-offset-4 hover:underline"
+                              >
+                                Ver
+                              </Link>
+                              <AdminBookingDeleteButton
+                                bookingId={candidate.booking.id}
+                              />
+                            </div>
+
+                            {candidate.candidate_status === "confirmado" ||
+                            candidate.candidate_status === "nao_compareceu" ? (
+                              <>
+                                <AdminCandidateNoShowButton
+                                  candidateId={candidate.id}
+                                  initialNotifiedAt={
+                                    candidate.no_show_notified_at
+                                  }
+                                  initialStatus={candidate.candidate_status}
+                                />
+                                <AdminCandidateCompletedButton
+                                  candidateId={candidate.id}
+                                  initialStatus={candidate.candidate_status}
+                                />
+                              </>
+                            ) : null}
+
+                            {candidate.candidate_status === "realizado" ? (
+                              <AdminCandidateCompletedButton
+                                candidateId={candidate.id}
+                                initialStatus={candidate.candidate_status}
+                              />
+                            ) : null}
                           </div>
                         </td>
                       </tr>

@@ -19,6 +19,10 @@ type AdminCandidateCompletedButtonProps = {
   initialStatus: string;
 };
 
+type AdminBookingDeleteButtonProps = {
+  bookingId: string;
+};
+
 async function postJson(
   url: string,
   payload: Record<string, unknown>,
@@ -112,8 +116,13 @@ export function AdminCandidateNoShowButton({
   );
   const [isPending, startTransition] = useTransition();
   const isNoShow = initialStatus === "nao_compareceu";
+  const canMarkNoShow = initialStatus === "confirmado";
 
   function handleMarkNoShow() {
+    if (!canMarkNoShow) {
+      return;
+    }
+
     setMessage("");
 
     startTransition(async () => {
@@ -152,16 +161,14 @@ export function AdminCandidateNoShowButton({
       <button
         type="button"
         onClick={handleMarkNoShow}
-        disabled={isPending || hasNotification}
+        disabled={isPending || hasNotification || !canMarkNoShow}
         className="rounded-full bg-red-600 px-4 py-2 text-xs font-black uppercase tracking-wide text-white shadow-[4px_4px_0_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-slate-400"
       >
         {isPending
           ? "Atualizando"
-          : hasNotification
+          : isNoShow || hasNotification
             ? "Já notificado"
-            : isNoShow
-              ? "Notificar novamente"
-              : "Não compareceu"}
+            : "Não compareceu"}
       </button>
       {message ? (
         <span className="max-w-[180px] text-xs font-semibold text-slate-600">
@@ -180,8 +187,13 @@ export function AdminCandidateCompletedButton({
   const [message, setMessage] = useState("");
   const [isCompleted, setIsCompleted] = useState(initialStatus === "realizado");
   const [isPending, startTransition] = useTransition();
+  const canMarkCompleted = initialStatus === "confirmado";
 
   function handleMarkCompleted() {
+    if (!canMarkCompleted) {
+      return;
+    }
+
     setMessage("");
 
     startTransition(async () => {
@@ -207,7 +219,7 @@ export function AdminCandidateCompletedButton({
       <button
         type="button"
         onClick={handleMarkCompleted}
-        disabled={isPending || isCompleted}
+        disabled={isPending || isCompleted || !canMarkCompleted}
         className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-black uppercase tracking-wide text-white shadow-[4px_4px_0_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-400"
       >
         {isPending ? "Atualizando" : "Realizado"}
@@ -218,5 +230,96 @@ export function AdminCandidateCompletedButton({
         </span>
       ) : null}
     </div>
+  );
+}
+
+export function AdminBookingDeleteButton({
+  bookingId,
+}: AdminBookingDeleteButtonProps) {
+  const router = useRouter();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  function handleConfirmDelete() {
+    setMessage("");
+
+    startTransition(async () => {
+      try {
+        await postJson("/api/admin/bookings/delete", {
+          booking_id: bookingId,
+        });
+        setIsModalOpen(false);
+        router.refresh();
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível excluir o agendamento.",
+        );
+      }
+    });
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setMessage("");
+          setIsModalOpen(true);
+        }}
+        className="rounded-full border-2 border-red-600 bg-white px-4 py-2 text-xs font-black uppercase tracking-wide text-red-700 transition hover:-translate-y-0.5 hover:bg-red-50"
+      >
+        Excluir
+      </button>
+
+      {isModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 py-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`delete-booking-title-${bookingId}`}
+        >
+          <div className="w-full max-w-md rounded-[22px] border-[3px] border-black bg-white p-6 text-slate-900 shadow-[0_10px_0_rgba(0,0,0,0.3)]">
+            <h2
+              id={`delete-booking-title-${bookingId}`}
+              className="text-xl font-black text-slate-950"
+            >
+              Excluir agendamento?
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              Essa ação removerá o agendamento e os candidatos vinculados.
+              Deseja continuar?
+            </p>
+
+            {message ? (
+              <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">
+                {message}
+              </p>
+            ) : null}
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                disabled={isPending}
+                className="rounded-full border-2 border-slate-300 bg-white px-5 py-3 text-sm font-black uppercase tracking-wide text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isPending}
+                className="rounded-full bg-red-600 px-5 py-3 text-sm font-black uppercase tracking-wide text-white shadow-[4px_4px_0_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {isPending ? "Excluindo" : "Confirmar exclusão"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
