@@ -47,6 +47,7 @@ type AdminBookingWithCandidates = {
   assessment_modality: AssessmentModality;
   booking_candidates: AdminBookingCandidate[] | null;
   company_name: string | null;
+  created_at: string;
   id: string;
   notes: string | null;
   session_id: string | null;
@@ -138,6 +139,15 @@ function formatDate(date: string) {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
+function formatRequestDate(date: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "America/Sao_Paulo",
+    year: "2-digit",
+  }).format(new Date(date));
+}
+
 function formatTime(time: string) {
   return time.slice(0, 5);
 }
@@ -191,7 +201,15 @@ function getCandidateDateWithSession(
   sessions: AdminSessionMap,
 ) {
   if (row.booking.assessment_modality === "online") {
-    return getLegacyCandidateDate(row);
+    return (
+      <span className="grid gap-0.5">
+        <span className="font-semibold text-slate-900">Online</span>
+        <span>{formatRequestDate(row.booking.created_at)}</span>
+        <span className="text-xs font-medium text-slate-500">
+          (Solicitação)
+        </span>
+      </span>
+    );
   }
 
   const session = getEffectiveSession(row, sessions);
@@ -276,7 +294,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select(
-      "id, session_id, assessment_modality, company_name, notes, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_session_id, candidate_name, desired_role, candidate_status, admin_notes, no_show_notified_at, created_at)",
+      "id, session_id, assessment_modality, company_name, notes, created_at, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_session_id, candidate_name, desired_role, candidate_status, admin_notes, no_show_notified_at, created_at)",
     )
     .eq("service_company", selectedCompany)
     .order("created_at", { ascending: false });
