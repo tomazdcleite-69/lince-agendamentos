@@ -35,6 +35,7 @@ export async function POST(request: Request) {
     .from("bookings")
     .select("id, assessment_modality, status")
     .eq("public_token", token)
+    .or("booking_type.eq.principal,booking_type.is.null")
     .maybeSingle();
 
   if (bookingError) {

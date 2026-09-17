@@ -2,7 +2,11 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import ScheduleGrid from "@/components/ScheduleGrid";
-import { getTodayInSaoPauloDateKey, isSessionBookable } from "@/lib/scheduleGrid";
+import { BOOKING_DEMAND_LABELS } from "@/types";
+import {
+  getTodayInSaoPauloDateKey,
+  isSessionBookable,
+} from "@/lib/scheduleGrid";
 import type {
   AssessmentModality,
   ServiceCompany,
@@ -16,6 +20,7 @@ type BookingFormProps = {
 };
 
 type FormState = {
+  demand: string;
   company_name: string;
   contact_name: string;
   contact_email: string;
@@ -32,6 +37,7 @@ type CandidateForm = {
 };
 
 const initialFormState: FormState = {
+  demand: "",
   company_name: "",
   contact_name: "",
   contact_email: "",
@@ -57,10 +63,9 @@ export default function BookingForm({
   const today = getTodayInSaoPauloDateKey();
   const isOnline = assessmentModality === "online";
   const isPresencial = assessmentModality === "presencial";
-  const initialSessionId =
-    isPresencial
-      ? sessions.find((session) => isSessionBookable(session, today))?.id ?? ""
-      : "";
+  const initialSessionId = isPresencial
+    ? (sessions.find((session) => isSessionBookable(session, today))?.id ?? "")
+    : "";
 
   const [sessionId, setSessionId] = useState(initialSessionId);
   const [form, setForm] = useState<FormState>(initialFormState);
@@ -91,11 +96,16 @@ export default function BookingForm({
   }
 
   function handleSessionChange(nextSessionId: string) {
-    const nextSession = sessions.find((session) => session.id === nextSessionId);
+    const nextSession = sessions.find(
+      (session) => session.id === nextSessionId,
+    );
 
     setSessionId(nextSessionId);
 
-    if (nextSession && candidates.length > Number(nextSession.available_spots)) {
+    if (
+      nextSession &&
+      candidates.length > Number(nextSession.available_spots)
+    ) {
       setError(
         `A data escolhida possui apenas ${nextSession.available_spots} vagas disponíveis.`,
       );
@@ -179,7 +189,9 @@ export default function BookingForm({
       isOnline &&
       normalizedCandidates.some((candidate) => !candidate.candidate_phone)
     ) {
-      setError("Informe o telefone de todos os candidatos da avaliação online.");
+      setError(
+        "Informe o telefone de todos os candidatos da avaliação online.",
+      );
       return;
     }
 
@@ -321,6 +333,26 @@ export default function BookingForm({
                 className="h-14 rounded-full border-0 bg-white px-6 text-center text-slate-950 shadow-inner outline-none transition placeholder:text-slate-700 focus:ring-4 focus:ring-white/40"
                 placeholder="Escreva aqui"
               />
+            </label>
+
+            <label className="grid gap-1 text-center text-sm font-medium text-white sm:col-span-2">
+              Demanda
+              <select
+                required
+                name="demand"
+                value={form.demand}
+                onChange={(event) => updateField("demand", event.target.value)}
+                className="h-14 rounded-full border-0 bg-white px-6 text-center text-slate-950 outline-none focus:ring-4 focus:ring-white/40"
+              >
+                <option value="" disabled>
+                  Selecione a demanda
+                </option>
+                {Object.entries(BOOKING_DEMAND_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="grid gap-1 text-center text-sm font-medium text-white sm:col-span-2">

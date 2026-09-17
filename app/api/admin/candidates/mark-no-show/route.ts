@@ -13,6 +13,9 @@ type NoShowSession = {
 };
 
 type NoShowBooking = {
+  booking_type: string | null;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
   assessment_modality: AssessmentModality;
   company_name: string;
   contact_email: string;
@@ -70,12 +73,25 @@ function getRelatedBooking(candidate: NoShowCandidate) {
 }
 
 function getRelatedSession(booking: NoShowBooking) {
+  if (
+    booking.booking_type === "avulso" &&
+    booking.scheduled_date &&
+    booking.scheduled_time
+  ) {
+    return {
+      session_date: booking.scheduled_date,
+      start_time: booking.scheduled_time,
+    };
+  }
   return Array.isArray(booking.test_room_sessions)
     ? booking.test_room_sessions[0]
     : booking.test_room_sessions;
 }
 
-async function setNotificationTimestamp(candidateId: string, timestamp: string) {
+async function setNotificationTimestamp(
+  candidateId: string,
+  timestamp: string,
+) {
   const { error } = await supabaseAdmin
     .from("booking_candidates")
     .update({
@@ -110,7 +126,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabaseAdmin
     .from("booking_candidates")
     .select(
-      "id, candidate_status, candidate_name, desired_role, no_show_notified_at, bookings(id, company_name, contact_email, assessment_modality, test_room_sessions(session_date, start_time))",
+      "id, candidate_status, candidate_name, desired_role, no_show_notified_at, bookings(id, company_name, contact_email, assessment_modality, booking_type, scheduled_date, scheduled_time, test_room_sessions(session_date, start_time))",
     )
     .eq("id", candidateId)
     .maybeSingle();
@@ -194,8 +210,7 @@ export async function POST(request: Request) {
       });
 
       return NextResponse.json({
-        email_warning:
-          "Status atualizado, mas houve falha no envio do e-mail.",
+        email_warning: "Status atualizado, mas houve falha no envio do e-mail.",
         success: true,
       });
     }

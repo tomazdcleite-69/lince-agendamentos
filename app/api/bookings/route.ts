@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { normalizeAssessmentModality } from "@/lib/assessmentModality";
+import { isBookingDemand } from "@/lib/bookingOperations";
 import {
   buildCustomerBookingEmail,
   buildLinceNotificationEmail,
@@ -192,10 +193,20 @@ export async function POST(request: Request) {
   const contactEmail = getString(payload, "contact_email").toLowerCase();
   const contactPhone = getString(payload, "contact_phone");
   const notes = getString(payload, "notes");
+  // Older public clients already request psychological assessments without this field.
+  const demand =
+    payload.demand === undefined
+      ? "avaliacao_psicologica"
+      : getString(payload, "demand");
+  if (!isBookingDemand(demand))
+    return errorResponse("Selecione uma demanda válida.");
   const assessmentModality = normalizeAssessmentModality(
     getString(payload, "assessment_modality"),
   );
-  const parsedCandidates = getCandidates(payload.candidates, assessmentModality);
+  const parsedCandidates = getCandidates(
+    payload.candidates,
+    assessmentModality,
+  );
   const serviceCompany = normalizeServiceCompany(
     getString(payload, "service_company"),
   );
@@ -261,7 +272,7 @@ export async function POST(request: Request) {
   if (
     assessmentModality === "presencial" &&
     session &&
-    session.status !== "aberta"
+    !["aberta", "aberto", "open", "active", "available"].includes(session.status)
   ) {
     return errorResponse("A data escolhida não está aberta para agendamento.");
   }
@@ -273,71 +284,50 @@ export async function POST(request: Request) {
   }
 
   const publicToken = generatePublicToken();
-  const { data: booking, error: bookingError } = await supabaseAdmin
-    .from("bookings")
-    .insert({
-      assessment_modality: assessmentModality,
-      candidates_count: candidatesCount,
-      company_name: companyName,
-      contact_email: contactEmail,
-      contact_name: contactName,
-      contact_phone: contactPhone || null,
-      notes: notes || null,
-      public_token: publicToken,
-      service_company: serviceCompany,
-      session_id: assessmentModality === "presencial" ? sessionId : null,
-      status: "confirmado",
-    })
-    .select("id, public_token")
-    .single();
+  // The RPC repeats the capacity check under the same session lock used by avulsos.
+  const { data: bookingId, error: bookingError } = await supabaseAdmin.rpc(
+    "create_principal_booking",
+    {
+      p_booking: {
+        demand,
+        requester_email: contactEmail,
+        assessment_modality: assessmentModality,
+        company_name: companyName,
+        contact_email: contactEmail,
+        contact_name: contactName,
+        contact_phone: contactPhone || null,
+        notes: notes || null,
+        public_token: publicToken,
+        service_company: serviceCompany,
+        session_id: assessmentModality === "presencial" ? sessionId : null,
+        status: "confirmado",
+        history_note:
+          assessmentModality === "online"
+            ? "Solicitação de avaliação online registrada pelo formulário público."
+            : "Agendamento presencial confirmado pelo formulário público.",
+      },
+      p_candidates: candidates,
+    },
+  );
 
-  if (bookingError || !booking) {
+  if (bookingError || !bookingId) {
+    if (bookingError?.code === "P0001") {
+      const remaining = Number(bookingError.details);
+      return errorResponse(
+        Number.isFinite(remaining)
+          ? `A data escolhida possui apenas ${Math.max(0, remaining)} vagas disponíveis.`
+          : "A data escolhida não possui vagas suficientes.",
+      );
+    }
+    if (bookingError?.code === "P0002")
+      return errorResponse("A data escolhida não foi encontrada.", 404);
+    if (bookingError?.code === "P0003")
+      return errorResponse("A data escolhida não está aberta para agendamento.");
+    if (bookingError?.code === "P0004")
+      return errorResponse("Não é possível agendar datas anteriores a hoje.");
     return errorResponse("Não foi possível criar o agendamento.", 500);
   }
-
-  const { error: candidatesError } = await supabaseAdmin
-    .from("booking_candidates")
-    .insert(
-      candidates.map((candidate) => ({
-        booking_id: booking.id,
-        candidate_session_id:
-          assessmentModality === "presencial" ? sessionId : null,
-        candidate_name: candidate.candidate_name,
-        candidate_email: candidate.candidate_email,
-        candidate_phone: candidate.candidate_phone,
-        candidate_status: "confirmado",
-        desired_role: candidate.desired_role,
-      })),
-    );
-
-  if (candidatesError) {
-    await supabaseAdmin.from("bookings").delete().eq("id", booking.id);
-
-    return errorResponse(
-      "Não foi possível registrar os candidatos do agendamento.",
-      500,
-    );
-  }
-
-  const { error: historyError } = await supabaseAdmin
-    .from("status_history")
-    .insert({
-      booking_id: booking.id,
-      changed_by: "cliente",
-      new_status: "confirmado",
-      note:
-        assessmentModality === "online"
-          ? "Solicitação de avaliação online registrada pelo formulário público."
-          : "Agendamento presencial confirmado pelo formulário público.",
-      old_status: null,
-    });
-
-  if (historyError) {
-    return errorResponse(
-      "O agendamento foi criado, mas não foi possível registrar o histórico.",
-      500,
-    );
-  }
+  const booking = { id: bookingId, public_token: publicToken };
 
   const { from, linceNotificationEmails } = getEmailConfig();
 

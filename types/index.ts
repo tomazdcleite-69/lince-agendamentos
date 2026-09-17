@@ -76,6 +76,12 @@ export type TestRoomSessionWithAvailability = {
 
 export type Booking = {
   id: string;
+  booking_type: BookingType | null;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  demand: BookingDemand | null;
+  requester_email: string | null;
+  archived_at: string | null;
   session_id: string | null;
   assessment_modality: AssessmentModality;
   company_name: string;
@@ -92,6 +98,7 @@ export type Booking = {
 
 export type BookingCandidate = {
   id: string;
+  archived_at: string | null;
   booking_id: string;
   candidate_session_id: string | null;
   candidate_name: string;
@@ -119,7 +126,10 @@ export type StatusHistory = {
 
 export type BookingWithSession = Booking & {
   booking_candidates?: BookingCandidate[];
-  test_room_sessions: Pick<TestRoomSession, "session_date" | "start_time"> | null;
+  test_room_sessions: Pick<
+    TestRoomSession,
+    "session_date" | "start_time"
+  > | null;
 };
 
 type TableDefinition<Row, Insert, Update> = {
@@ -149,6 +159,12 @@ export type Database = {
         {
           id?: string;
           session_id?: string | null;
+          booking_type?: BookingType | null;
+          scheduled_date?: string | null;
+          scheduled_time?: string | null;
+          demand?: BookingDemand | null;
+          requester_email?: string | null;
+          archived_at?: string | null;
           assessment_modality?: AssessmentModality;
           company_name: string;
           contact_name: string;
@@ -168,6 +184,7 @@ export type Database = {
         {
           id?: string;
           booking_id: string;
+          archived_at?: string | null;
           candidate_session_id?: string | null;
           candidate_name: string;
           desired_role: string;
@@ -203,8 +220,32 @@ export type Database = {
         Relationships: [];
       };
     };
-    Functions: Record<string, never>;
+    Functions: {
+      create_manual_booking: {
+        Args: { p_booking: Json; p_candidate: Json };
+        Returns: string;
+      };
+      create_principal_booking: {
+        Args: { p_booking: Json; p_candidates: Json };
+        Returns: string;
+      };
+      admin_week_report: {
+        Args: { p_start: string; p_end: string };
+        Returns: Json;
+      };
+      archive_exported_candidates: {
+        Args: { p_start: string; p_end: string; p_candidates: Json };
+        Returns: number;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
 };
+
+export type BookingType = "principal" | "avulso";
+export const BOOKING_DEMAND_LABELS = {
+  recrutamento_selecao: "Recrutamento e Seleção",
+  avaliacao_psicologica: "Avaliação Psicológica",
+} as const;
+export type BookingDemand = keyof typeof BOOKING_DEMAND_LABELS;

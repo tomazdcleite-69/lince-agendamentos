@@ -36,6 +36,7 @@ export default async function ConfirmedPage({
         .from("bookings")
         .select("id, assessment_modality, public_token")
         .eq("public_token", token)
+        .or("booking_type.eq.principal,booking_type.is.null")
         .maybeSingle()
     : { data: null };
   const booking = data as Pick<

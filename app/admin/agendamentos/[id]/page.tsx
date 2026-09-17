@@ -7,6 +7,7 @@ import { getServiceCompanyLabel } from "@/lib/serviceCompany";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
   BOOKING_STATUS_LABELS,
+  BOOKING_DEMAND_LABELS,
   CANDIDATE_STATUS_LABELS,
   type BookingStatus,
   type BookingWithSession,
@@ -67,7 +68,7 @@ export default async function AdminBookingPage({
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select(
-      "id, session_id, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, service_company, status, public_token, created_at, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_name, desired_role, candidate_phone, candidate_email, candidate_status, admin_notes, no_show_notified_at, resume_url, created_at)",
+      "id, session_id, assessment_modality, booking_type, scheduled_date, scheduled_time, demand, requester_email, archived_at, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, service_company, status, public_token, created_at, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_name, desired_role, candidate_phone, candidate_email, candidate_status, admin_notes, no_show_notified_at, resume_url, created_at)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -78,9 +79,7 @@ export default async function AdminBookingPage({
     return (
       <main className="min-h-screen bg-[#5b2396] px-4 py-10 text-white sm:px-6 lg:px-8">
         <section className="mx-auto max-w-2xl rounded-[22px] border-[3px] border-black bg-white p-8 text-slate-900 shadow-[0_10px_0_rgba(0,0,0,0.22)]">
-          <h1 className="text-2xl font-semibold">
-            Agendamento não encontrado
-          </h1>
+          <h1 className="text-2xl font-semibold">Agendamento não encontrado</h1>
           <p className="mt-3 text-slate-600">
             O registro pode ter sido removido ou o identificador está incorreto.
           </p>
@@ -129,7 +128,11 @@ export default async function AdminBookingPage({
 
           <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
             <Link
-              href="/admin"
+              href={
+                booking.booking_type === "avulso"
+                  ? "/admin/agendamentos-avulsos"
+                  : "/admin"
+              }
               className="inline-flex w-fit items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black uppercase tracking-wide !text-black shadow-[6px_6px_0_rgba(0,0,0,0.32)] transition hover:-translate-y-0.5 hover:bg-[#efe4ff]"
             >
               Voltar
@@ -141,6 +144,25 @@ export default async function AdminBookingPage({
         <section className="rounded-[22px] border-[3px] border-black bg-white p-6 text-slate-900 shadow-[0_10px_0_rgba(0,0,0,0.22)]">
           <h2 className="text-xl font-semibold">Detalhes do agendamento</h2>
           <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+            <DetailItem
+              label="Tipo de agendamento"
+              value={booking.booking_type === "avulso" ? "Avulso" : "Principal"}
+            />
+            <DetailItem
+              label="Demanda"
+              value={
+                booking.demand
+                  ? BOOKING_DEMAND_LABELS[booking.demand]
+                  : "Não informado"
+              }
+            />
+            <DetailItem
+              label="Responsável Solicitante"
+              value={booking.requester_email || "Não informado"}
+            />
+            {booking.archived_at ? (
+              <DetailItem label="Arquivamento" value="Arquivado" />
+            ) : null}
             <DetailItem label="Empresa" value={booking.company_name} />
             <DetailItem
               label="Empresa do serviço"
@@ -159,18 +181,22 @@ export default async function AdminBookingPage({
               label="Data"
               value={
                 <span className="capitalize">
-                  {booking.test_room_sessions
-                    ? formatDate(booking.test_room_sessions.session_date)
-                    : "Não informada"}
+                  {booking.booking_type === "avulso" && booking.scheduled_date
+                    ? formatDate(booking.scheduled_date)
+                    : booking.test_room_sessions
+                      ? formatDate(booking.test_room_sessions.session_date)
+                      : "Não informada"}
                 </span>
               }
             />
             <DetailItem
               label="Horário"
               value={
-                booking.test_room_sessions
-                  ? formatTime(booking.test_room_sessions.start_time)
-                  : "Não informado"
+                booking.booking_type === "avulso" && booking.scheduled_time
+                  ? formatTime(booking.scheduled_time)
+                  : booking.test_room_sessions
+                    ? formatTime(booking.test_room_sessions.start_time)
+                    : "Não informado"
               }
             />
             <DetailItem

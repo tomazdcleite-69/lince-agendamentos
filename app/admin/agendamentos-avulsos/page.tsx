@@ -3,6 +3,6 @@ import AdminBookingsPage, {
 } from "@/components/AdminBookingsPage";
 
 export const dynamic = "force-dynamic";
-export default function AdminPage(props: AdminPageProps) {
-  return <AdminBookingsPage {...props} bookingType="principal" />;
+export default function ManualBookingsPage(props: AdminPageProps) {
+  return <AdminBookingsPage {...props} bookingType="avulso" />;
 }

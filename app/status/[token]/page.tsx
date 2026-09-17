@@ -50,6 +50,7 @@ export default async function StatusPage({ params }: StatusPageProps) {
       "id, session_id, assessment_modality, company_name, contact_name, contact_email, contact_phone, candidates_count, notes, status, public_token, created_at, test_room_sessions(session_date, start_time), booking_candidates(id, booking_id, candidate_session_id, candidate_name, desired_role, candidate_status, cancelled_at, rescheduled_at, created_at)",
     )
     .eq("public_token", token)
+    .or("booking_type.eq.principal,booking_type.is.null")
     .maybeSingle();
 
   const booking = data as unknown as BookingWithSession | null;
@@ -62,7 +63,8 @@ export default async function StatusPage({ params }: StatusPageProps) {
         ...new Set(
           candidates
             .map(
-              (candidate) => candidate.candidate_session_id ?? booking.session_id,
+              (candidate) =>
+                candidate.candidate_session_id ?? booking.session_id,
             )
             .filter((sessionId): sessionId is string => Boolean(sessionId)),
         ),
@@ -218,9 +220,7 @@ export default async function StatusPage({ params }: StatusPageProps) {
             ) : (
               <>
                 <div className="rounded-2xl border border-slate-200 p-4">
-                  <dt className="text-sm font-semibold text-slate-500">
-                    Data
-                  </dt>
+                  <dt className="text-sm font-semibold text-slate-500">Data</dt>
                   <dd className="mt-1 font-black capitalize text-[#1f1230]">
                     {booking.test_room_sessions
                       ? formatDate(booking.test_room_sessions.session_date)
@@ -247,10 +247,7 @@ export default async function StatusPage({ params }: StatusPageProps) {
                 {candidates.length > 0 ? (
                   <ul className="divide-y divide-slate-200 rounded-2xl border border-slate-200">
                     {candidates.map((candidate, index) => (
-                      <li
-                        key={candidate.id}
-                        className="px-4 py-4"
-                      >
+                      <li key={candidate.id} className="px-4 py-4">
                         <div className="grid gap-3 lg:grid-cols-[44px_1.2fr_1fr_1fr_0.8fr_0.9fr] lg:items-center">
                           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#efe4ff] text-sm font-black text-[#5b2396]">
                             {index + 1}

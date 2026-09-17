@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { BOOKING_DEMAND_LABELS } from "@/types";
 
 const modalityOptions = [
   { label: "Todos", value: "" },
@@ -77,7 +78,7 @@ function FilterDateInput({
   );
 }
 
-export default function AdminFilters() {
+export default function AdminFilters({ manual = false }: { manual?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -87,7 +88,10 @@ export default function AdminFilters() {
   const modality = searchParams.get("modalidade") ?? "";
   const hour = searchParams.get("horario") ?? "";
   const status = searchParams.get("status") ?? "";
-  const activeFilters = [date, modality, hour, status].filter(Boolean).length;
+  const demand = searchParams.get("demanda") ?? "";
+  const activeFilters = [date, modality, hour, status, demand].filter(
+    Boolean,
+  ).length;
 
   function updateFilter(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -108,6 +112,7 @@ export default function AdminFilters() {
     params.delete("modalidade");
     params.delete("horario");
     params.delete("status");
+    params.delete("demanda");
 
     const queryString = params.toString();
     router.push(queryString ? `${pathname}?${queryString}` : pathname);
@@ -144,12 +149,38 @@ export default function AdminFilters() {
               value={modality}
               onChange={(value) => updateFilter("modalidade", value)}
             />
+            {manual ? (
+              <label className="grid gap-1 text-sm font-semibold text-slate-700">
+                Horário
+                <input
+                  type="time"
+                  value={hour}
+                  onChange={(event) =>
+                    updateFilter("horario", event.target.value)
+                  }
+                  className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-slate-900"
+                />
+              </label>
+            ) : (
+              <FilterSelect
+                label="Horário"
+                name="horario"
+                options={hourOptions}
+                value={hour}
+                onChange={(value) => updateFilter("horario", value)}
+              />
+            )}
             <FilterSelect
-              label="Horário"
-              name="horario"
-              options={hourOptions}
-              value={hour}
-              onChange={(value) => updateFilter("horario", value)}
+              label="Demanda"
+              name="demanda"
+              value={demand}
+              onChange={(value) => updateFilter("demanda", value)}
+              options={[
+                { label: "Todas", value: "" },
+                ...Object.entries(BOOKING_DEMAND_LABELS).map(
+                  ([value, label]) => ({ value, label }),
+                ),
+              ]}
             />
             <FilterSelect
               label="Status"
